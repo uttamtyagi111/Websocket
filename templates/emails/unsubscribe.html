@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Email with Unsubscribe Button</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        background-color: #f4f4f4;
+      }
+      .email-container {
+        width: 100%;
+        max-width: 600px;
+        margin: 0 auto;
+        background-color: #ffffff;
+        padding: 20px;
+        box-sizing: border-box;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      }
+      .email-header {
+        text-align: center;
+        margin-bottom: 20px;
+      }
+      .email-body {
+        margin-bottom: 30px;
+      }
+      .email-footer {
+        text-align: center;
+        margin-top: 30px;
+      }
+      .unsubscribe-button {
+        background-color: #e74c3c;
+        color: #ffffff;
+        padding: 12px 20px;
+        text-decoration: none;
+        font-size: 16px;
+        border-radius: 5px;
+        display: inline-block;
+        margin-top: 20px;
+      }
+      .unsubscribe-button:hover {
+        background-color: #c0392b;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="email-container">
+      <div class="email-header">
+        <h1>Welcome to Our Service, {{ firstName }} {{ lastName }}!</h1>
+      </div>
+
+      <div class="email-body">
+        <p>Dear {{ firstName }} {{ lastName }},</p>
+        <p>
+          Thank you for being a valued member of our community. We are excited
+          to have you with us!
+        </p>
+        <p>
+          If you ever wish to unsubscribe from our emails, please use the link
+          below.
+        </p>
+      </div>
+
+      <div class="email-footer">
+        <p>
+          If you'd like to unsubscribe from future emails, please click the
+          button below:
+        </p>
+        <a href="{{ unsubscribe_url }}" class="unsubscribe-button"
+          >Unsubscribe</a
+        >
+      </div>
+    </div>
+  </body>
+</html>

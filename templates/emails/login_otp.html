@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>2FA_Login</title>
+    <style>
+   
+      body,
+      table,
+      td,
+      a {
+        margin: 0;
+        padding: 0;
+        text-size-adjust: 100%;
+      }
+      table {
+        border-spacing: 0;
+      }
+      img {
+        border: 0;
+        height: auto;
+        line-height: 100%;
+        text-decoration: none;
+        display: block;
+      }
+
+      /* Responsive Design */
+      @media screen and (max-width: 600px) {
+        .email-container {
+          width: 100% !important;
+        }
+        .email-header,
+        .email-footer {
+          padding: 15px !important;
+        }
+      }
+
+      /* Fallback font */
+      * {
+        font-family: inter, sans-serif;
+      }
+
+      /* Additional Styles */
+      .otp-container td {
+        width: 50px;
+        height: 50px;
+        background-color: #ffffff;
+        border: 2px solid #3b82f6;
+        font-size: 24px;
+        font-weight: bold;
+        text-align: center;
+        vertical-align: middle;
+        border-radius: 8px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      }
+    </style>
+  </head>
+  <body
+
+  >
+    <table
+      role="presentation"
+      width="100%"
+      cellspacing="0"
+      cellpadding="0"
+      border="0"
+      style="background-color: #f3f4f6"
+    >
+      <tr>
+        <td align="center" style="padding: 20px 0">
+          <table
+            role="presentation"
+            width="600"
+            cellspacing="0"
+            cellpadding="0"
+            border="0"
+            style="
+              background-color: #ffffff;
+              border-radius: 10px;
+              box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            "
+            class="email-container"
+          >
+         <!-- Logo Section -->
+<tr style="margin-bottom: 20px;">
+  <td align="center" style="padding-top: 20px; padding-left: 10px; margin-top: 10px">
+    <img
+      src="https://emailbulkshoot.s3.ap-southeast-2.amazonaws.com/assests+for+Email+Automation/Techserve%404x.png"
+      alt="Wish Geeks Logo"
+      style="max-width: 370px; margin-bottom: 10px;"
+    />
+  </td>
+</tr>
+
+<!-- Header Section -->
+<tr>
+  <td align="center" style="background-color: #ffffff;">
+    <div
+      style="
+        background: rgba(51, 141, 251, 1);
+        color: #ffffff;
+        padding: 25px;
+      "
+    >
+      <img
+        src="https://emailbulkshoot.s3.ap-southeast-2.amazonaws.com/assests+for+Email+Automation/padlock.png"
+        alt="Sign Up"
+        style="width: 32px; height: 32px; margin-bottom: 10px"
+      />
+      <p style="font-size: 24px; font-weight: bold; margin: 0; font-family: inter, sans-serif;">
+        Secure Your Account With <br />
+        Two-Factor Authentication
+      </p>
+    </div>
+  </td>
+</tr>
+
+            <tr>
+              <td
+                style="
+                  padding: 20px;
+                  font-family: inter, sans-serif;
+                  font-size: 16px;
+                  color: #333;
+                "
+              >
+                <p><strong>Dear {{username}},</strong></p>
+                <p style="    font-family: inter, sans-serif; text-align: justify;">
+                  To enhance the security of your account, we require two-factor
+                  authentication for access. Here is your 2FA code:
+                </p>
+
+                <table width="100%" style="margin: 20px 0">
+                    <tr>
+                      <td
+                        align="center"
+                        style="background-color: #e8f0ff; padding: 20px; font-size: 24px; font-weight: bold;"
+                      >
+                        {{otp}}
+                        <br>
+                        <span style="color: #555; font-size: 14px; padding-top: 5px; display: block;">
+                          Code expires in 10 minutes
+                        </span>
+                      </td>
+                    </tr>
+                  </table>
+                  
+                  
+
+                <p style="    font-family: inter, sans-serif; text-align: justify;">
+                  Please enter this code in the login prompt to access your
+                  account. If you did not request this code, please contact us
+                  immediately.
+                </p>
+                <p style="    font-family: inter, sans-serif; text-align: justify;">
+                  For additional security, consider updating your password and
+                  reviewing your account settings regularly.
+                </p>
+              </td>
+            </tr>
+
+            <!-- Button -->
+            <tr>
+              <td align="center" style="padding: 20px">
+                <a
+                  href="#"
+                  style="
+                  background: rgba(51, 141, 251, 1);
+                    color: #ffffff;
+                    text-decoration: none;
+                    padding: 15px 25px;
+                    font-family: inter, sans-serif;
+                    border-radius: 5px;
+                    font-size: 16px;
+                    display: inline-block;
+                  "
+                  >Visit Your Account</a
+                >
+              </td>
+            </tr>
+            <tr>
+              <td align="center" style="background: rgba(51, 141, 251, 1); padding: 20px;">
+                  <img src="https://emailbulkshoot.s3.ap-southeast-2.amazonaws.com/assests+for+Email+Automation/techserve+logo.png" alt="Wish Geeks TechServe" width="183" style="display: block; margin-bottom: 10px;" />
+                  <table role="presentation" cellspacing="0" cellpadding="" border="0">
+                      <tr>
+                          <td style="padding-right: 15px;">
+                              <a href="https://www.instagram.com/wishgeeks/" style="text-decoration: none">
+                                  <div style="width: 45px; height: 45px; display: flex; justify-content: center; align-items: center; background-color: #ffffff; border-radius: 50%;">
+                                      <img src="https://wishgeekstechserve.s3.ap-southeast-2.amazonaws.com/image.png" alt="Instagram" style="width: 20px; height: 20px; object-fit: contain" />
+                                  </div>
+                              </a>
+                          </td>
+  
+                          <td style="padding-right: 15px;">
+                              <a href="https://www.linkedin.com/company/wish-geeks/" style="text-decoration: none">
+                                  <div style="width: 45px; height: 45px; display: flex; justify-content: center; align-items: center; background-color: #ffffff; border-radius: 50%;">
+                                      <img src="https://wishgeekstechserve.s3.ap-southeast-2.amazonaws.com/image+(72).png" alt="LinkedIn" style="width:20px; height: 20px; object-fit: contain" />
+                                  </div>
+                              </a>
+                          </td>
+  
+                          <td>
+                              <a href="https://www.facebook.com/wishgeeks" style="text-decoration: none">
+                                  <div style="width: 45px; height: 45px; display: flex; justify-content: center; align-items: center; background-color: #ffffff; border-radius: 50%;">
+                                      <img src="https://wishgeekstechserve.s3.ap-southeast-2.amazonaws.com/image+(73).png" alt="Facebook" style="width: 20px; height: 20px; object-fit: contain" />
+                                  </div>
+                              </a>
+                          </td>
+                      </tr>
+                  </table>
+  
+                  <p style="color: #ffffff; font-size: 14px; margin: 0; padding: 10px; display: flex; justify-content: center; gap: 20px; flex-wrap: wrap;">
+                      <span>Privacy Policy</span>
+                      <span>Contact Us</span>
+                      <span>Unsubscribe</span>
+                  </p>
+                  
+              </td>
+          </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
