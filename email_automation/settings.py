@@ -33,7 +33,7 @@ ALLOWED_HOSTS = [
     "backend.wishgeeksdigital.com",
     "www.wishgeeksdigital.com",
     "django-api-aqlo.onrender.com",
-    "https://websocket-bpqt.onrender.com",
+    "websocket-bpqt.onrender.com",
 ]
 
 
