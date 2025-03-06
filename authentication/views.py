@@ -1,7 +1,5 @@
-from rest_framework_simplejwt.exceptions import InvalidToken
 from rest_framework_simplejwt.token_blacklist.models import (
     BlacklistedToken,
-    OutstandingToken,
 )
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework.response import Response
@@ -17,8 +15,8 @@ import secrets
 from django.utils.timezone import now, timedelta
 from django.contrib.auth.models import User
 from django.contrib.auth.tokens import default_token_generator
-from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
-from django.utils.encoding import force_bytes, force_str
+from django.utils.http import urlsafe_base64_decode
+from django.utils.encoding import force_str
 from django.shortcuts import render
 from django.contrib.auth import authenticate
 from django.contrib import messages
@@ -43,7 +41,7 @@ from .utils import generate_otp, send_otp_email, send_welcome_email
 from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.views import APIView
-from django.contrib.auth import authenticate, login as django_login, logout
+from django.contrib.auth import authenticate
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.views import TokenRefreshView
@@ -214,7 +212,7 @@ def loginPage(request):
     except UserProfile.DoesNotExist:
         return Response({"message": "User profile not found."}, status=400)
 
-    # Plan aur device limit database se fetch karein
+    # Plan and device limit fetch from the database
     current_plan = user_profile.current_plan
     plan_name = current_plan.name if current_plan else "Trial"
     device_limit = current_plan.device_limit if current_plan else 1
@@ -224,58 +222,73 @@ def loginPage(request):
     if not system_info:
         return Response({"message": "System info is required."}, status=400)
 
-    if not check_device_limit(user_profile, system_info, device_limit):
-        return Response(
-            {
-                "message": f"Device limit exceeded. You can only log in on {device_limit} device(s) based on your {plan_name} plan. Please log out from other devices to log in.",
-                "logged_in_devices": logged_in_devices(user_profile),
-            },
-            status=200,
-        )
+    try:
+        if not check_device_limit(user_profile, system_info, device_limit):
+            return Response(
+                {
+                    "message": f"Device limit exceeded. You can only log in on {device_limit} device(s) based on your {plan_name} plan. Please log out from other devices to log in.",
+                    "logged_in_devices": logged_in_devices(user_profile),
+                },
+                status=200,
+            )
+    except Exception as e:
+        return Response({"message": f"Error checking device limit: {str(e)}"}, status=400)
 
     if user_profile.is_2fa_enabled:
-        LoginOTP.objects.filter(user=user, expires_at__lt=now()).delete()
-        otp_instance = LoginOTP.objects.create(
-            user=user, otp=generate_otp(), expires_at=now() + timedelta(minutes=5)
-        )
-        send_otp_email(user.email, user.username, otp_instance.otp)
+        try:
+            # Delete expired OTPs
+            LoginOTP.objects.filter(user=user, expires_at__lt=now()).delete()
 
-        return Response(
-            {
-                "message": "OTP sent to your email. Please verify to complete login.",
-                "redirect": "verify_otp",
-                "user_id": user.id,
-            },
-            status=200,
-        )
+            # Create new OTP instance
+            otp_instance = LoginOTP.objects.create(
+                user=user, otp=generate_otp(), expires_at=now() + timedelta(minutes=5)
+            )
+            send_otp_email(user.email, user.username, otp_instance.otp)
+
+            return Response(
+                {
+                    "message": "OTP sent to your email. Please verify to complete login.",
+                    "redirect": "verify_otp",
+                    "user_id": user.id,
+                },
+                status=200,
+            )
+        except Exception as e:
+            return Response({"message": f"Error generating OTP: {str(e)}"}, status=400)
     else:
-        # If 2FA is disabled, generate access and refresh tokens
-        refresh = RefreshToken.for_user(user)
-        access_token = str(refresh.access_token)
-        refresh_token = str(refresh)
+        try:
+            # If 2FA is disabled, generate access and refresh tokens
+            refresh = RefreshToken.for_user(user)
+            access_token = str(refresh.access_token)
+            refresh_token = str(refresh)
 
-        existing_devices = UserDevice.objects.filter(user=user_profile.user)
-        device_count = existing_devices.count()
+            existing_devices = UserDevice.objects.filter(user=user_profile.user)
+            device_count = existing_devices.count()
 
-        device_name = f"device{device_count + 1}"
-        user_device = UserDevice.objects.create(
-            user=user,
-            device_name=device_name,
-            system_info=system_info,
-            token=refresh_token,
-        )
+            device_name = f"device{device_count + 1}"
 
-        return Response(
-            {
-                "user_id": user.id,
-                "access": access_token,
-                "refresh": refresh_token,
-                "system_info": system_info,
-                "device_id": user_device.id,
-                "redirect": "home",
-                "message": "Login successful",
-            }
-        )
+            # Create new UserDevice record
+            user_device = UserDevice.objects.create(
+                user=user,
+                device_name=device_name,
+                system_info=system_info,
+                token=refresh_token,
+            )
+
+            return Response(
+                {
+                    "user_id": user.id,
+                    "access": access_token,
+                    "refresh": refresh_token,
+                    "system_info": system_info,
+                    "device_id": user_device.id,
+                    "redirect": "home",
+                    "message": "Login successful",
+                }
+            )
+        except Exception as e:
+            return Response({"message": f"Error during login: {str(e)}"}, status=400)
+
 
 
 @api_view(["POST"])
@@ -420,11 +433,13 @@ class LogoutDeviceView(APIView):
                     {"error": f"Failed to blacklist old token: {str(e)}"},
                     status=HTTP_400_BAD_REQUEST,
                 )
-            device.delete()
+            # device.delete()
             new_refresh_token = RefreshToken.for_user(user)
             new_access_token = str(new_refresh_token.access_token)
-                
-
+            
+            device.token = str(new_refresh_token) 
+            device.system_info = system_info  
+            device.save()
 
 
             return Response(
@@ -886,7 +901,6 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.core.mail import send_mail
-from .models import Enquiry
 from .serializers import EnquirySerializer
 from django.conf import settings
 

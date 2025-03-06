@@ -697,71 +697,6 @@ class ContactFileUpdateView(APIView):
         )
 
 
-# class ContactFileUpdateView(APIView):
-#     permission_classes = [IsAuthenticated]
-
-#     def put(self, request, file_id):
-#         """
-#         Update an existing contact file with a new CSV.
-#         This allows the user to edit and add new rows with new fields.
-#         """
-#         user = request.user
-
-#         try:
-#             contact_file = ContactFile.objects.get(id=file_id, user=user)
-#         except ContactFile.DoesNotExist:
-#             return Response(
-#                 {
-#                     "error": "Contact file not found or you do not have permission to update it."
-#                 },
-#                 status=status.HTTP_404_NOT_FOUND,
-#             )
-#         contacts_data = request.data.get("contacts")
-#         if not contacts_data:
-#             return Response(
-#                 {"error": "No contacts data provided."},
-#                 status=status.HTTP_400_BAD_REQUEST,
-#             )
-
-#         updated_contacts = []
-#         row_count = 0
-#         new_rows_count = 0
-
-#         for row in contacts_data:
-#             contact_id = row.get("id")
-#             if contact_id:
-#                 try:
-#                     contact = Contact.objects.get(
-#                         id=contact_id, contact_file=contact_file
-#                     )
-#                     contact.data.update(
-#                         row.get("data", {})
-#                     )
-#                     contact.save()
-#                     updated_contacts.append(contact)
-#                     row_count += 1
-#                 except Contact.DoesNotExist:
-#                     continue
-#             else:
-#                 new_row = row.get("data", {})
-#                 if new_row:
-#                     contact = Contact(contact_file=contact_file, data=new_row)
-#                     contact.save()
-#                     updated_contacts.append(contact)
-#                     new_rows_count += 1
-
-#         return Response(
-#             {
-#                 "message": "Contacts updated and new rows added successfully.",
-#                 "file_name": contact_file.name,
-#                 "total_contacts_updated": row_count,
-#                 "total_new_rows": new_rows_count,
-#                 "created_at": contact_file.uploaded_at.strftime("%Y-%m-%d %H:%M:%S"),
-#             },
-#             status=status.HTTP_200_OK,
-#         )
-
-
 class DeleteContactListView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -1073,7 +1008,7 @@ class CampaignView(APIView):
                 {"error": "Campaign not found."}, status=status.HTTP_404_NOT_FOUND
             )
 
-
+import json
 class SendEmailsView(APIView):
     DEFAULT_EMAIL_LIMIT = 20
 
@@ -1213,7 +1148,7 @@ class SendEmailsView(APIView):
         uploaded_file = campaign.uploaded_file
         display_name = campaign.display_name
         delay_seconds = campaign.delay_seconds
-        subject = campaign.subject_file
+        subject_file = campaign.subject_file
 
         try:
             file_content = self.get_html_content_from_s3(uploaded_file)
@@ -1222,6 +1157,24 @@ class SendEmailsView(APIView):
                 {"error": f"Error fetching file from S3: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+            
+        try:
+        # Fetch the SubjectFile object
+            subject_file_data = SubjectFile.objects.get(id=subject_file.id, user=user)
+
+        # Parse the JSON data from the SubjectFile's 'data' field
+            subject_data = subject_file_data.data  # This is a list of dictionaries
+        except SubjectFile.DoesNotExist:
+            return Response(
+                {"error": "Subject file not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        except json.JSONDecodeError as e:
+            return Response(
+                {"error": f"Error decoding JSON from subject file: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
+
 
         total_contacts = len(contact_list)
         successful_sends = 0
@@ -1232,6 +1185,7 @@ class SendEmailsView(APIView):
         num_smtp_servers = len(smtp_servers)
 
         for i, recipient in enumerate(contact_list):
+
             if email_limit != 0 and profile.emails_sent >= email_limit:
                 for remaining_recipient in contact_list[i:]:
                     failed_sends += 1
@@ -1314,51 +1268,57 @@ class SendEmailsView(APIView):
             file_id = contact_file.id
 
             unsubscribe_url = f"{request.scheme}://{request.get_host()}/contact-files/{file_id}/unsubscribe/{contact_id}/"
+            subject = subject_data[i % len(subject_data)]  # Correctly select the subject using modulo
+            subject_value = subject.get("Subject", "Default Subject")  # Get the subject value safely
+            print(f"i: {i}, subject: {subject}") 
+            print(f"Selected subject: {subject_value}")
 
-            context = {
+            # If subject is still the default, it means no match was found
+
+
+            # Render the subject dynamically
+            subject_template = Template(subject_value)
+            context = Context({
+                "firstName": recipient.get("firstName"),  # Add recipient's first name
+                "lastName": recipient.get("lastName"),    # Add recipient's last name
+                "companyName": recipient.get("companyName"),  # Add recipient's company name
+            })
+            rendered_subject = subject_template.render(context)  # Render the subject using context
+
+            # Now, render the email content dynamically based on a template
+            context_data = Context({
                 "firstName": recipient.get("firstName"),
                 "lastName": recipient.get("lastName"),
                 "companyName": recipient.get("companyName"),
-                "display_name": display_name,
-                "unsubscribe_url": unsubscribe_url,
-            }
+                "unsubscribe_url": unsubscribe_url,  # Make sure the unsubscribe URL is part of the context
+            })
+
             try:
+                # Render the email body from the uploaded HTML template (file_content)
                 template = Template(file_content)
-                context_data = Context(context)
-                email_content = template.render(context_data)
+                email_body = template.render(context_data)
             except Exception as e:
                 failed_sends += 1
-                status_message = (
-                    f"Failed to send: Error formatting email content - {str(e)}"
-                )
+                status_message = f"Failed to send: Error formatting email content - {str(e)}"
                 timestamp = timezone.now().strftime("%Y-%m-%d %H:%M:%S")
-                email_statuses.append(
-                    {
-                        "email": validated_email,
-                        "status": status_message,
-                        "timestamp": timestamp,
-                    }
-                )
-                async_to_sync(channel_layer.group_send)(
-                    f"email_status_{user_id}",
-                    {
-                        "type": "send_status_update",
-                        "email": validated_email,
-                        "status": status_message,
-                        "timestamp": timestamp,
-                    },
-                )
-                continue
+                email_statuses.append({
+                    "email": recipient_email,
+                    "status": status_message,
+                    "timestamp": timestamp,
+                })
+                continue  # Skip to the next recipient if email body rendering fails
 
-            smtp_server = smtp_servers[i % num_smtp_servers]
+            # Now send the email with the dynamically rendered subject
+            smtp_server = smtp_servers[i % num_smtp_servers]  # Use round-robin to pick SMTP server
             email = EmailMessage(
-                subject=subject,
-                body=email_content,
-                from_email=f"{display_name} <{smtp_server.username}>",
-                to=[recipient_email],
+                subject=rendered_subject,  # Use dynamically rendered subject
+                body=email_body,
+                from_email=f"{display_name} <{smtp_server.username}>",  # Sender email
+                to=[recipient_email],  # Recipient email
             )
-            email.content_subtype = "html"
+            email.content_subtype = "html"  # Set email content type to HTML
 
+            # Send the email using the selected SMTP server connection
             try:
                 connection = get_connection(
                     backend="django.core.mail.backends.smtp.EmailBackend",
@@ -1372,26 +1332,26 @@ class SendEmailsView(APIView):
                 email.send()
                 status_message = "Sent successfully"
                 successful_sends += 1
-                profile.increment_email_count()
+                profile.increment_email_count()  # Update profile's sent email count
                 profile.save()
             except Exception as e:
                 status_message = f"Failed to send: {str(e)}"
                 failed_sends += 1
                 logger.error(f"Error sending email to {recipient_email}: {str(e)}")
 
+            # Log the email status
             timestamp = timezone.now().strftime("%Y-%m-%d %H:%M:%S")
-            email_statuses.append(
-                {
-                    "email": validated_email,
-                    "status": status_message,
-                    "timestamp": timestamp,
-                    "from_email": smtp_server.username,
-                    "smtp_server": smtp_server.host,
-                }
-            )
+            email_statuses.append({
+                "email": recipient_email,
+                "status": status_message,
+                "timestamp": timestamp,
+                "from_email": smtp_server.username,
+                "smtp_server": smtp_server.host,
+            })
+
             EmailStatusLog.objects.create(
                 user=user,
-                email=validated_email,
+                email=recipient_email,
                 status=status_message,
                 from_email=smtp_server.username,
                 smtp_server=smtp_server.host,
@@ -1401,7 +1361,7 @@ class SendEmailsView(APIView):
                 f"email_status_{user_id}",
                 {
                     "type": "send_status_update",
-                    "email": validated_email,
+                    "email": recipient_email,
                     "status": status_message,
                     "timestamp": timestamp,
                 },
@@ -1409,6 +1369,7 @@ class SendEmailsView(APIView):
 
             if delay_seconds > 0:
                 time.sleep(delay_seconds)
+
 
         return Response(
             {
