@@ -383,6 +383,80 @@ def request_logout_otp(request):
         return Response({"error": "Invalid Device ID. Device not found."}, status=400)
 
 
+# class LogoutDeviceView(APIView):
+#     permission_classes = [AllowAny]
+
+#     def post(self, request):
+#         device_id = request.data.get("device_id")
+#         system_info = request.data.get("system_info")
+#         otp = request.data.get("otp")
+
+#         if not device_id or not system_info or not otp:
+#             return Response(
+#                 {"error": "Device ID, OTP, and system info are required"},
+#                 status=HTTP_400_BAD_REQUEST,
+#             )
+
+#         device = get_object_or_404(UserDevice, id=device_id)
+#         user = device.user
+
+#         try:
+#             otp_record = DeviceVerifyOTP.objects.get(user=user, otp=otp)
+
+#             if otp_record.is_expired():
+#                 otp_record.delete()
+#                 return Response(
+#                     {"error": "OTP expired. Request a new one."},
+#                     status=HTTP_400_BAD_REQUEST,
+#                 )
+
+#             otp_record.delete()
+#         except DeviceVerifyOTP.DoesNotExist:
+#             return Response(
+#                 {"error": "Invalid OTP. Please try again."}, status=HTTP_400_BAD_REQUEST
+#             )
+
+#         try:
+#             old_refresh_token = device.token
+
+#             if not old_refresh_token:
+#                 return Response(
+#                     {"error": "No refresh token found for this device"},
+#                     status=HTTP_400_BAD_REQUEST,
+#                 )
+
+#             try:
+#                 old_token = RefreshToken(old_refresh_token)
+#                 old_token.blacklist()
+#             except Exception as e:
+#                 return Response(
+#                     {"error": f"Failed to blacklist old token: {str(e)}"},
+#                     status=HTTP_400_BAD_REQUEST,
+#                 )
+#             # device.delete()
+#             new_refresh_token = RefreshToken.for_user(user)
+#             new_access_token = str(new_refresh_token.access_token)
+            
+#             device.token = str(new_refresh_token) 
+#             device.system_info = system_info  
+#             device.save()
+
+
+#             return Response(
+#                 {
+#                     "success": f"Device {device.device_name} logged out successfully.",
+#                     "user_id": user.id,
+#                     "device_id": device_id,
+#                     "access_token": new_access_token,
+#                     "refresh_token": str(new_refresh_token),
+#                     "message": "Device has been logged out and removed.",
+#                 },
+#                 status=HTTP_200_OK,
+#             )
+
+#         except Exception as e:
+#             return Response({"error": str(e)}, status=HTTP_400_BAD_REQUEST)
+
 class LogoutDeviceView(APIView):
     permission_classes = [AllowAny]
 
@@ -391,9 +465,9 @@ class LogoutDeviceView(APIView):
         system_info = request.data.get("system_info")
         otp = request.data.get("otp")
 
-        if not device_id or not system_info or not otp:
+        if not device_id or not otp:
             return Response(
-                {"error": "Device ID, OTP, and system info are required"},
+                {"error": "Device ID and OTP are required"},
                 status=HTTP_400_BAD_REQUEST,
             )
 
@@ -433,14 +507,25 @@ class LogoutDeviceView(APIView):
                     {"error": f"Failed to blacklist old token: {str(e)}"},
                     status=HTTP_400_BAD_REQUEST,
                 )
-            # device.delete()
+
+            if not system_info:
+                device.delete()
+                return Response(
+                    {
+                        "success": f"Device {device.device_name} has been logged out and removed.",
+                        "user_id": user.id,
+                        "device_id": device_id,
+                        "message": "Device has been successfully deleted.",
+                    },
+                    status=HTTP_200_OK,
+                )
+
             new_refresh_token = RefreshToken.for_user(user)
             new_access_token = str(new_refresh_token.access_token)
-            
-            device.token = str(new_refresh_token) 
-            device.system_info = system_info  
-            device.save()
 
+            device.token = str(new_refresh_token)
+            device.system_info = system_info
+            device.save()
 
             return Response(
                 {
@@ -449,14 +534,13 @@ class LogoutDeviceView(APIView):
                     "device_id": device_id,
                     "access_token": new_access_token,
                     "refresh_token": str(new_refresh_token),
-                    "message": "Device has been logged out and removed.",
+                    "message": "Device has been logged out but not removed.",
                 },
                 status=HTTP_200_OK,
             )
 
         except Exception as e:
             return Response({"error": str(e)}, status=HTTP_400_BAD_REQUEST)
-
 
 def check_device_limit(user_profile, system_info, device_limit):
     """
