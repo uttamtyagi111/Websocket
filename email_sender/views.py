@@ -1599,7 +1599,7 @@ class SubjectFileUploadView(APIView):
             user=user,
             name=file_name,
             uploaded_at=now(),
-            data={"data": rows},  # Storing rows as JSON
+            data=rows,  # Storing rows as JSON
         )
 
         return Response(
