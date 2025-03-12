@@ -548,7 +548,7 @@ def upgrade_plan(request):
             "message": "Upgrade Plan Payment Initiated",
             "name": request.user.username,
             "amount": amount,
-            "redirectUrl": f"https://django-api-aqlo.onrender.com/verify-upgrade-payment/?id={merchant_transaction_id}",
+            "redirectUrl": f"https://websocket-bpqt.onrender.com/verify-upgrade-payment/?id={merchant_transaction_id}",
             "redirectMode": "POST",
             "callbackUrl": f"http://localhost:3000/payment-success?id={merchant_transaction_id}",
             "mobileNumber": mobile,
