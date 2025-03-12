@@ -378,7 +378,7 @@ def initiate_payment(request):
             "message": "Payment Initiated",
             "name": name,
             "amount": amount,
-            "redirectUrl": f"https://django-api-aqlo.onrender.com/verify-payment/?id={merchant_transaction_id}",
+            "redirectUrl": f"https://websocket-bpqt.onrender.com/verify-payment/?id={merchant_transaction_id}",
             "redirectMode": "POST",
             "callbackUrl": f"http://localhost:3000/payment-success?id={merchant_transaction_id}",
             "mobileNumber": mobile,
