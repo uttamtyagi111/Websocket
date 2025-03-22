@@ -3,61 +3,91 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Email Template</title>
+    <title>Upgrade Plan Email</title>
 </head>
-<body style="margin: 0; padding: 0; font-family: inter, sans-serif; background-color: #f5f5f5;">
-
-    <!-- Main Wrapper -->
-    <table width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #ffffff; max-width: 600px; margin: 0 auto; border-collapse: collapse; font-family: inter, sans-serif;">
-        <!-- Logo Section -->
+<body>
+    <table width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: auto; background-color: #ffffff; border-radius: 8px;    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); padding-top: 20px; ">
         <tr>
-            <td align="center" style="padding: 20px;">
+            <td align="center" style="padding: 5px 0;">
                 <img src="https://emailbulkshoot.s3.ap-southeast-2.amazonaws.com/assests+for+Email+Automation/Techserve%404x.png" alt="Wish Geeks TechServe" style="max-width: 250px;">
             </td>
         </tr>
 
-        <!-- Header Section -->
-
         <tr>
             <td align="center" style="background-color: rgba(51, 141, 251, 1); padding: 20px;">
                 <div style="color: #ffffff; text-align: center;">
-                    <img src="https://emailbulkshoot.s3.ap-southeast-2.amazonaws.com/assests+for+Email+Automation/padlock.png" alt="Sign Up" style="width: 32px; height: 32px; margin-bottom: 10px; display: block; margin-left: auto; margin-right: auto;" />
+                    <img src="https://emailbulkshoot.s3.ap-southeast-2.amazonaws.com/assests+for+Email+Automation/thank-you.png" alt="Sign Up" style="width: 32px; height: 32px; margin-bottom: 10px; display: block; margin-left: auto; margin-right: auto;" />
                     <p style="font-size: 18px; font-weight: bold; font-family: inter, sans-serif; margin: 0;">
-                        Reset Your Password
+                        Thank You For  Purchasing our
+                        Plan
                     </p>
                 </div>
             </td>
         </tr>
-     
 
-      <!-- Content Section -->
-<tr>
-    <td style="padding: 10px 20px; font-size: 14px; color: #333; font-family: inter, sans-serif;">
-        <p><strong>Dear {{username}},</strong></p>
-        <p>We received a request to reset your password. No worries—we’ve got you covered!</p>
-       
-    </td>
-</tr>
-
-<tr>
-    <td style="padding: 10px 20px; font-size: 14px; color: #333; font-family: inter, sans-serif;">
-        <strong>Click the button below to reset your password:</strong>
-    </td>
-</tr>
-
-    
-        
-
-        <!-- Button -->
         <tr>
-            <td align="center" style="padding: 15px;">
-                <a href="{{reset_link}}" style="background: rgba(51, 141, 251, 1); color: white; text-decoration: none; padding: 10px 20px; font-size: 16px; border-radius: 5px; display: inline-block;">
-                    Reset Your Password
-                </a>
+            <td style="padding: 20px; text-align: left; font-size: 14px; font-family: inter, sans-serif;">
+                <p>Dear <b>{{username}}</b>,</p>
+                <p>Thank you for purchasing the <strong>{{plan_name}}</strong> ! 🎊 You’re now part of an exclusive community with access to amazing benefits.</p>
             </td>
         </tr>
+    
 
-        <!-- Footer -->
+     
+
+
+        <tr>
+            <td style="padding: 20px;">
+                <table width="100%" cellspacing="0" cellpadding="10" style="background: rgba(51, 141, 251, 0.14); text-align: center; font-size: 14px; width: 100%; border-collapse: collapse; font-family: inter, sans-serif; border-radius: 10px;">
+                    
+                    <tr>
+                        <td colspan="2">
+                            <b>Your Plan Details</b>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: center; padding-right: 10px;"><b>Plan Name</b></td>
+                        <td style="text-align: center;"><span style="color: #007bff;">{{plan_name}}</span></td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: center; "><b>Email limit</b></td>
+                        <td style="text-align: center; "><span style="color: #007bff;">{{email_limit}}</span></td>
+                    </tr>
+                    <tr>
+                      <td style="text-align: center; "><b>Device limit</b></td>
+                      <td style="text-align: center; "><span style="color: #007bff;">{{device_limit}}</span></td>
+                  </tr>
+                    <tr>
+                        <td style="text-align: center; padding-right: 10px;"><b>Duration</b></td>
+                        <td style="text-align: center;"><span style="color: #007bff;">{{duration_days}}</span></td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: center; padding-right: 10px;"><b>Active Date</b></td>
+                        <td style="text-align: center;"><span style="color: #007bff;">{{plan_start_date}}</span></td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: center; padding-right: 10px;"><b>Expiry Date</b></td>
+                        <td style="text-align: center;"><span style="color: #007bff;">{{plan_expiration_date}}</span></td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+        
+
+        <tr>
+            <td style="padding: 20px; font-family: inter, sans-serif; font-size: 14px;">
+                <b>What's benefits ?</b>
+                <p style="margin-top: 10px; margin-bottom: 10px;">✅ Enjoy Exclusive Discounts & Perks</p>
+                <p style="margin-top: 10px; margin-bottom: 10px;">✅ Access Premium Content & Features</p>
+            </td>
+        </tr>
+        
+
+        <tr>
+            <td align="center" style="padding: 20px;">
+                <a href="#" style="background-color: rgba(51, 141, 251, 1); color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-size: 16px; font-family: inter, sans-serif;">Access Your Plan</a>
+            </td>
+        </tr>
         <tr>
             <td align="center" style="background: rgba(51, 141, 251, 1); padding: 20px;">
                 <table role="presentation" cellspacing="0" cellpadding="0" border="0">
@@ -120,7 +150,7 @@
                 </p>
             </td>
         </tr>
-    </table>
 
+    </table>
 </body>
 </html>

@@ -1,6 +1,4 @@
-from rest_framework_simplejwt.token_blacklist.models import (
-    BlacklistedToken,
-)
+from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework.response import Response
 from rest_framework import status
@@ -27,8 +25,15 @@ from .forms import (
     PasswordResetRequestForm,
     SetNewPasswordForm,
 )
+from rest_framework.exceptions import AuthenticationFailed
+from rest_framework_simplejwt.tokens import RefreshToken
+import logging
+import os
+from dotenv import load_dotenv
 from .forms import OTPVerificationForm
 from django.core.mail import send_mail
+from django.utils import timezone
+from datetime import datetime
 from django.conf import settings
 from .models import DeviceVerifyOTP, LoginOTP
 from rest_framework.decorators import api_view, permission_classes
@@ -37,7 +42,7 @@ from .forms import PasswordResetRequestForm
 from .utils import send_password_reset_email, send_logout_otp_email
 from subscriptions.models import UserProfile, UserDevice
 from django.shortcuts import render
-from .utils import generate_otp, send_otp_email, send_welcome_email
+from .utils import generate_otp, send_otp_email, send_welcome_email,send_login_otp_email
 from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.views import APIView
@@ -243,7 +248,7 @@ def loginPage(request):
             otp_instance = LoginOTP.objects.create(
                 user=user, otp=generate_otp(), expires_at=now() + timedelta(minutes=5)
             )
-            send_otp_email(user.email, user.username, otp_instance.otp)
+            send_login_otp_email(user.email, user.username, otp_instance.otp)
 
             return Response(
                 {
@@ -456,7 +461,6 @@ def request_logout_otp(request):
 
 #         except Exception as e:
 #             return Response({"error": str(e)}, status=HTTP_400_BAD_REQUEST)
-
 class LogoutDeviceView(APIView):
     permission_classes = [AllowAny]
 
@@ -525,6 +529,7 @@ class LogoutDeviceView(APIView):
 
             device.token = str(new_refresh_token)
             device.system_info = system_info
+            device.created_at = timezone.make_aware(datetime.now())  
             device.save()
 
             return Response(
@@ -594,17 +599,11 @@ def logged_in_devices(user_profile):
             "device_name": device.device_name,
             "device_id": device.id,
             "system_info": device.system_info,
+            "created_at" : device.created_at,
         }
         for device in devices
     ]
     return devices_info
-
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
-from rest_framework.exceptions import AuthenticationFailed
-from rest_framework_simplejwt.tokens import RefreshToken
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -807,7 +806,10 @@ def verify_otp(request):
                     user.is_active = True
                     user.set_password(user_data["password"])
                     user.save()
-                    send_welcome_email(user)
+
+                    user_profile = UserProfile.objects.get(user=user)
+                    plan_expiration_date = user_profile.plan_expiration_date
+                    send_welcome_email(user,plan_expiration_date)
 
                 cache.delete(f'otp_{request.data.get("email")}')
                 cache.delete(f'register_data_{request.data.get("email")}')
@@ -838,8 +840,6 @@ def user_list(request):
     return render(request, "authentication/user_list.html", {"users": users})
 
 
-import os
-from dotenv import load_dotenv
 
 load_dotenv()
 
@@ -979,23 +979,23 @@ def get_2fa_status(request):
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-
-
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from django.core.mail import send_mail
+from django.core.mail import send_mail, EmailMultiAlternatives
+from django.template.loader import render_to_string
 from .serializers import EnquirySerializer
 from django.conf import settings
 
 class EnquiryView(APIView):
     permission_classes = [AllowAny]
+
     def post(self, request):
         serializer = EnquirySerializer(data=request.data)
-        
+
         if serializer.is_valid():
             enquiry = serializer.save()
-            
+
             # Send email to admin
             admin_email_subject = f"New Enquiry from {enquiry.name}"
             admin_email_body = f"""
@@ -1009,22 +1009,31 @@ class EnquiryView(APIView):
                 admin_email_subject,
                 admin_email_body,
                 settings.DEFAULT_FROM_EMAIL,
-                [settings.ADMIN_EMAIL],  # Replace with your email
+                [settings.ADMIN_EMAIL],  # Replace with your admin email
                 fail_silently=False,
             )
 
-            # Send confirmation email to user
+            # Render HTML email template for user confirmation
             user_email_subject = "Enquiry Received"
-            user_email_body = f"Dear {enquiry.name},\n\nThank you for reaching out! We have received your enquiry and will get back to you soon.\n\nBest Regards,\nYour Company"
-            
-            send_mail(
-                user_email_subject,
-                user_email_body,
-                settings.DEFAULT_FROM_EMAIL,
-                [enquiry.email],
-                fail_silently=False,
+            user_email_body = render_to_string('authentication\enquiry_confirmation.html', {
+                'name': enquiry.name,
+                'phone': enquiry.phone,
+                'email': enquiry.email,
+                'subject': enquiry.subject,
+                'description': enquiry.description
+            })
+
+            # Send email with both plain text and HTML content
+            email = EmailMultiAlternatives(
+                subject=user_email_subject,
+                body="Your enquiry has been received.",  # Fallback text version
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                to=[enquiry.email]
             )
+            email.attach_alternative(user_email_body, "text/html")
+            email.send()
 
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-        
+
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+

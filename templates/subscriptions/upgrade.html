@@ -100,17 +100,17 @@
       style="
         background: rgba(51, 141, 251, 1);
         color: #ffffff;
-        padding: 10px;
+        padding: 15px;
       "
     >
       <img
-        src="https://emailbulkshoot.s3.ap-southeast-2.amazonaws.com/assests+for+Email+Automation/padlock.png"
+        src="https://emailbulkshoot.s3.ap-southeast-2.amazonaws.com/assests+for+Email+Automation/thank-you.png"
         alt="Sign Up"
         style="width: 32px; height: 32px; margin-bottom: 10px"
       />
       <p style="font-size: 24px; font-weight: bold; margin: 0; font-family: inter, sans-serif;">
-        Secure Your Account With <br />
-        Two-Factor Authentication
+        Thank You For The Upgrade Your
+        Plan
       </p>
     </div>
   </td>
@@ -125,60 +125,67 @@
                   color: #333;
                 "
               >
-                <p><strong>Dear {{username}}</strong></p>
+                <p><strong>Dear {{username}},</strong></p>
                 <p style="    font-family: inter, sans-serif; text-align: justify;">
-                  To enhance the security of your account, we require two-factor
-                  authentication for access. Here is your 2FA code:
+                    Great news! Your Plan has been successfully upgraded to <strong>{{plan_name}}</strong>. 🎊 Get ready to enjoy even more exclusive perks and benefits!
                 </p>
 
-                <table width="100%" style="margin: 20px 0">
-                    <tr>
-                      <td
-                        align="center"
-                        style="background-color: #e8f0ff; padding: 20px; font-size: 24px; font-weight: bold;"
-                      >
-                        {{otp}}
-                        <br>
-                        <span style="color: #555; font-size: 14px; padding-top: 5px; display: block;">
-                          Code expires in 10 minutes
-                        </span>
-                      </td>
+                <table width="100%" style="background: rgba(51, 141, 251, 0.14); padding: 20px; border-spacing: 5px; font-size: 14px; font-family: inter, sans-serif; border-radius: 10px;">
+                    <tr align="center" style="padding-bottom: 20px;">
+                        <td colspan="2">
+                            <b>Your Upgraded Plan Details:</b>
+                            <br>
+                        </td>
                     </tr>
-                  </table>
-                  
-                  
+                
+                    <tr>
+                        <td style="text-align: center; padding-top: 20px; padding-bottom: 5px;"><b>Plan Name</b></td>
+                        <td style="text-align: center; padding-top: 20px;  padding-bottom: 0px; "><span style="color: #007bff;">{{plan_name}}</span></td>
+                    </tr>
+                    
+                    <tr>
+                        <td style="text-align: center; "><b>Email limit</b></td>
+                        <td style="text-align: center; "><span style="color: #007bff;">{{email_limit}}</span></td>
+                    </tr>
+                    <tr>
+                      <td style="text-align: center; "><b>Device limit</b></td>
+                      <td style="text-align: center; "><span style="color: #007bff;">{{device_limit}}</span></td>
+                  </tr>
+                  <tr>
+                    <td style="text-align: center; "><b>Duration</b></td>
+                    <td style="text-align: center; "><span style="color: #007bff;">{{duration_days}}</span></td>
+                </tr>
+                    
+                    <tr>
+                        <td style="text-align: center; padding-top: 5px; padding-bottom: 5px;"><b>Active Date</b></td>
+                        <td style="text-align: center; padding-bottom: 5px;"><span style="color: #007bff;">{{plan_start_date}}</span></td>
+                    </tr>
+                
+                    <tr>
+                        <td style="text-align: center; padding-top: 0px; padding-bottom: 0px;"><b>Expiry Date</b></td>
+                        <td style="text-align: center; padding-bottom: 0px;"><span style="color: #007bff;">{{plan_expiration_date}}</span></td>
+                    </tr>
 
-                <p style="    font-family: inter, sans-serif; text-align: justify;">
-                  Please enter this code in the login prompt to access your
-                  account. If you did not request this code, please contact us
-                  immediately.
-                </p>
-                <!-- <p style="    font-family: inter, sans-serif; text-align: justify;">
-                  For additional security, consider updating your password and
-                  reviewing your account settings regularly.
-                </p> -->
+                  
+                </table>
+                
+                <tr>
+                    <td style="padding: 20px; font-family: inter, sans-serif; font-size: 14px;">
+                        <b>What's Next?</b>
+                        <p style="margin-top: 10px; margin-bottom: 10px;">✅ Enjoy Exclusive Discounts & Perks</p>
+                        <p style="margin-top: 10px; margin-bottom: 10px;">✅ Access Premium Content & Features</p>
+                    </td>
+                </tr>
+                
+        
               </td>
             </tr>
-
-            <!-- Button -->
-            <!-- <tr>
-              <td align="center" style="padding: 20px">
-                <a
-                  href="#"
-                  style="
-                  background: rgba(51, 141, 251, 1);
-                    color: #ffffff;
-                    text-decoration: none;
-                    padding: 15px 25px;
-                    font-family: inter, sans-serif;
-                    border-radius: 5px;
-                    font-size: 16px;
-                    display: inline-block;
-                  "
-                  >Visit Your Account</a
-                >
-              </td>
-            </tr> -->
+            <tr>
+                <td align="center" style="padding: 20px;">
+                    <a href="#" style="background-color: rgba(51, 141, 251, 1); color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-size: 16px; font-family: inter, sans-serif;">Access Your Plan</a>
+                </td>
+            </tr>
+    
             <tr>
               <td align="center" style="background: rgba(51, 141, 251, 1); padding: 20px;">
                   <table role="presentation" cellspacing="0" cellpadding="0" border="0">

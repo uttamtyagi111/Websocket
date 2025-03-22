@@ -1,141 +1,89 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Invoice</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background: #f9f9f9;
-        }
-        .invoice-container {
-            width: 80%;
-            max-width: 800px;
-            margin: auto;
-            background: #fff;
-            padding: 20px;
-            box-shadow: 0px 0px 10px #ddd;
-            border-radius: 5px;
-        }
-        .header {
-            text-align: center;
-            border-bottom: 2px solid #007bff;
-            padding-bottom: 10px;
-            margin-bottom: 20px;
-        }
-        .header h2 {
-            margin: 0;
-            color: #007bff;
-        }
-        .transaction-info {
-            font-weight: bold;
-            margin-bottom: 15px;
-            line-height: 1.5;
-        }
-        .invoice-details {
-            display: flex;
-            justify-content: space-between;
-            gap: 20px;
-            margin-bottom: 20px;
-        }
-        .address-box {
-            background: #f1f1f1;
-            padding: 10px;
-            border-radius: 5px;
-            width: 50%;
-            font-size: 14px;
-            line-height: 1.5;
-        }
-        .bold {
-            font-weight: bold;
-        }
-        .table-container {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-        .table-container th, .table-container td {
-            border: 1px solid #ddd;
-            padding: 10px;
-            text-align: center;
-        }
-        .table-container th {
-            background: #007bff;
-            color: white;
-        }
-        .footer {
-            text-align: center;
-            margin-top: 20px;
-            font-size: 14px;
-            color: #666;
-        }
-    </style>
-</head>
-<body>
-    <div class="invoice-container">
-        <div class="header">
-            <h2>Invoice</h2>
+  </head>
+  <body style="font-family: Arial, sans-serif; margin: 0; padding: 20px; text-align: center;">
+    <div style="max-width: 700px; margin: 0 auto; text-align: left;">
+      <!-- Header Section -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <div style=" display: flex; justify-content: space-between; align-items: center;">
+          <img src="https://www.wishgeekstechserve.com/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Fwish.1c4addc7.png&w=1200&q=75" alt="Header Image" style="width: 35%; height: 100%;" />
         </div>
-        
-        <!-- Transaction ID & Date -->
-        <div class="transaction-info">
-            <p>Transaction ID: {{ transaction_id }}</p>
-            <p>Date: {{ invoice_date }}</p>
+        <div style="font-size: 14px; color: gray; font-weight: 700; text-align: right;">You Wish We Fullfill</div>
+      </div>
+
+      <!-- Seller and Buyer Details Section -->
+      <div style="display: flex; justify-content: space-between; flex-wrap: wrap;">
+        <div style="width: 50%; font-size: 14px; line-height: 1.6;">
+          Wish Geeks Techserve Pvt Ltd.<br />
+          12A02 Iconic Tower<br />
+          13th Floor, Sector 62, Noida<br />
+          UP 201306<br />
+          Contact: 800 900 6321<br />
+          Email: abc@gmail.com
         </div>
 
-        <!-- Company Address (Left) & Billing Address (Right) -->
-        <div class="invoice-details">
-            <div class="address-box">
-                <p class="bold">Company Address:</p>
-                <p>{{ company_name }}</p>
-                <p>{{ company_address }}</p>
-                <p>{{ company_city }}, {{ company_state }} - {{ company_zip_code }}</p>
-                <p>{{ company_country }}</p>
-                <p>Email: {{ company_email }}</p>
-                <p>Phone: {{ company_phone }}</p>
-            </div>
-
-            <div class="address-box">
-                <p class="bold">Billing To:</p>
-                <p>{{ name }}</p>
-                <p>{{ email }}</p>
-                <p class="bold">Billing Address:</p>
-                <p>{{ address_line1 }}</p>
-                <p>{{ address_line2 }}</p>
-                <p>{{ city }}, {{ state }} - {{ zip_code }}</p>
-                <p>{{ country }}</p>
-            </div>
+        <div style="width: 30%; font-size: 14px; margin-top: 100px;">
+          <p class="padding:0px">{{ name }}</p>
+          <p>{{ address_line1 }}</p>
+          <p>{{ address_line2 }}</p>
+          <p>{{ city }}, {{ state }}</p>
+          <p>{{ zip_code }},{{ country }}</p>
         </div>
+      </div>
 
-        <!-- Plan Details Table -->
-        <table class="table-container">
+      <!-- Invoice Number Section -->
+      <h2 style="font-size: 20px; color: gray">Customer Invoice: {{ invoice_number }}</h2>
+
+      <!-- Invoice Dates Section -->
+      <div style="display: flex; justify-content: space-between; font-size: 14px; padding-bottom: 5px;">
+        <div>
+          <strong>Invoice Date</strong> : {{ plan_start_date }}
+        </div>
+      </div>
+
+      <!-- Items Table Section (Updated) -->
+      <div style="margin-top: 10px;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 14px; border: 1px solid black;">
+            <!-- Table Header -->
             <thead>
-                <tr>
-                    <th>Plan Name</th>
-                    <th>Price</th>
-                    <th>Expiry Date</th>
-                    <th>Email Limit</th>
-                    <th>Device Limit</th>
+                <tr style="border-bottom: 1px solid black;">
+                    <th style="padding: 8px; border: 1px solid black; text-align: center;">Plan</th>
+                    <th style="padding: 8px; border: 1px solid black; text-align: center;">Expiry Date</th>
+                    <th style="padding: 8px; border: 1px solid black; text-align: center;">Email Limit</th>
+                    <th style="padding: 8px; border: 1px solid black; text-align: center;">Device Limit</th>
+                    <th style="padding: 8px; border: 1px solid black; text-align: center;">Amount</th>
                 </tr>
             </thead>
+    
+            <!-- Table Body -->
             <tbody>
                 <tr>
-                    <td>{{ plan }}</td>
-                    <td>${{ amount }}</td>
-                    <td>{{ expiry_date }}</td>
-                    <td>{{ email_limit }}</td>
-                    <td>{{ device_limit }}</td>
+                    <td style="padding: 8px; border: 1px solid black; text-align: center;">{{ plan_name }}</td>
+                    <td style="padding: 8px; border: 1px solid black; text-align: center;">{{ plan_expiration_date }}</td>
+                    <td style="padding: 8px; border: 1px solid black; text-align: center;">{{ email_limit }}</td>
+                    <td style="padding: 8px; border: 1px solid black; text-align: center;">{{ device_limit }}</td>
+                    <td style="padding: 8px; border: 1px solid black; text-align: center;">₹{{ amount }}</td>
                 </tr>
             </tbody>
+    
+            <!-- Total Amount Row -->
+            <tfoot>
+                <tr>
+                    <td colspan="4" style="padding: 8px;  font-weight: bold;">Total amount</td>
+                    <td style="padding: 8px; text-align: center; font-weight: bold;">₹{{ amount }}</td>
+                </tr>
+            </tfoot>
         </table>
-
-        <!-- Footer -->
-        <div class="footer">
-            <p>Thank you for your business!</p>
-        </div>
     </div>
-</body>
+    
+
+      <!-- Payment Terms and Amount Section -->
+     
+    
+    </div>
+  </body>
 </html>

@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Invoice</title>
+</head>
+<body style="font-family: Arial, sans-serif; margin: 0; padding: 20px; text-align: center;">
+    <div style="max-width: 700px; margin: 0 auto; text-align: left;">
+        <!-- Header Section -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <div style="width: 60px; height: 55px; margin-right: 20px; border: 2px solid gray; border-radius: 100%; display: flex; justify-content: center; align-items: center;">
+                <img src="http://localhost:5000/uploads/logoImage.png" alt="Header Image" style="width: 45px; height: 35px;" />
+            </div>
+            <div style="font-size: 14px; color: gray; font-weight: 700; text-align: right;">${data.companyTagline
+            }</div>
+        </div>
+        <!-- Seller and Buyer Details Section -->
+        <div style="display: flex; justify-content: space-between; flex-wrap: wrap;">
+            <div style="width: 50%; font-size: 14px; line-height: 0.6">
+                <p>${data.seller.name}</p>
+                <p>${data.seller.address.replace(/\n/g, "<br><br>")}</p>
+                <p>Contact: ${data.seller.contactNumber}</p>
+                <p>Email: ${data.seller.email}</p>
+                <p><strong>Pan Number:</strong> ${data.seller.pan}</p>
+                <p><strong>GSTIN:</strong> ${data.seller.gstin}</p>
+            </div>
+            <div style="width: 30%; font-size: 14px; margin-top: 130px;">
+                <p>${data.buyer.name}</p>
+                <p>${data.buyer.address}</p>
+                <p><strong>GSTIN:</strong> ${data.buyer.gstin}</p>
+                <p style="margin: 5px 0; font-size: 14px;"><strong style="width: 10px;">Place of supply:</strong> ${data.placeOfSupply
+            }</p>
+            </div>
+        </div>
+        <!-- Invoice Number Section -->
+        <h2 style="font-size: 20px; color: gray">Customer Invoice: ${data.invoiceNumber
+            }</h2>
+        <!-- Invoice Dates Section -->
+        <div style="display: flex; justify-content: space-between; font-size: 14px; padding-bottom: 5px;">
+            <div><strong>Invoice Date</strong><br /><br>${data.date}</div>
+            <div><strong>Due Date</strong><br /><br>${data.dueDate}</div>
+            ${deliveryDateSection}
+        </div>
+        <!-- Items Table Section -->
+        <div style="margin-top: 10px">
+            <div style="display: flex; border-bottom: 1px solid black; padding: 5px 0; font-size: 14px; font-weight: bold;">
+                <div style="width: 40%">Description</div>
+                <div style="width: 15%">Quantity</div>
+                <div style="width: 15%">Unit Price</div>
+                <div style="width: 15%">Taxes</div>
+                <div style="width: 15%">Amount</div>
+            </div>
+            ${data.items
+                .map(
+                    (item) => `
+            <div style="display: flex; padding: 5px 0; font-size: 14px">
+                <div style="width: 40%">${item.description}</div>
+                <div style="width: 15%">${item.quantity}</div>
+                <div style="width: 15%">₹${item.price}</div>
+                <div style="width: 15%">${item.tax}%</div>
+                <div style="width: 15%">₹${item.total}</div>
+            </div>`
+                )
+                .join("")}
+        </div>
+        <!-- Payment Terms and Amount Section -->
+        <div style="display: flex; justify-content: space-between; padding: 5px 0; align-items: center;">
+            <p style="font-size: 14px; margin-top: 10px; white-space: nowrap"></p>
+            <div style="display: flex; flex-direction: column; font-size: 14px; width: 50%; justify-content: flex-start; align-items: flex-start;">
+                <div style="display: flex; width: 83%; justify-content: space-between">
+                    <div style="width: auto">Untaxed Amount</div>
+                    <div style="width: auto; text-align: left">₹${data.subtotal
+            }</div>
+                </div>
+                <br />
+                <div style="display: flex; width: 83%; justify-content: space-between; margin-top: 5px;">
+                    <div style="width: auto">${data.taxName}</div>
+                    <div style="width: auto; text-align: left">₹${data.tax
+            }</div>
+                </div>
+                <hr style="border-bottom: 1px solid black; width: 100%; margin-left: auto; margin-right: 0; margin-top: 10px;" />
+            </div>
+        </div>
+        <!-- Payment Communication Section -->
+        <div style="display: flex; justify-content: space-between; padding: 5px 0; align-items: center;">
+            <p style="font-size: 14px; margin-top: -20px"><strong></strong> <span style="font-weight: bold"></span></p>
+            <div style="display: flex; flex-direction: column; font-size: 14px; width: 50%; justify-content: flex-start; align-items: flex-start;">
+                <div style="display: flex; width: 83%; justify-content: space-between">
+                    <div style="width: auto; color: gray">Total</div>
+                    <div style="width: auto; text-align: left; color: gray">₹${data.total
+            }</div>
+                </div>
+                <br />
+                <div style="display: flex; width: 86%; justify-content: flex-end">
+                    <div style="width: auto; text-align: right">Total amount in words:</div>
+                </div>
+                <div style="display: flex; width: 86%; justify-content: flex-end">
+                    <div style="width: auto; text-align: right; color: gray; font-size: 12px; margin-top: 8px;">
+                        <span>${data.totalInWords}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Bank Details Section -->
+        <div style="font-size: 14px; line-height: 1; width: 100%; margin: 20px 0">
+            <p><strong>Bank Details:</strong></p>
+            <p><strong>Company name:</strong> ${data.bankDetails.companyName
+            }</p>
+            <p><strong>Account number:</strong> ${data.bankDetails.accountNumber
+            }</p>
+            <p><strong>IFSC:</strong> ${data.bankDetails.ifsc}</p>
+            <p><strong>SWIFT code:</strong> ${data.bankDetails.swift}</p>
+            <p><strong>Bank name:</strong> ${data.bankDetails.bankName}</p>
+            <p><strong>Branch:</strong> ${data.bankDetails.branch}</p>
+        </div>
+    </div>
+</body>
+</html>

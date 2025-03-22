@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Email Template</title>
 </head>
-<body style="margin: 0; padding: 0; font-family: inter, sans-serif; background-color: #f5f5f5;">
+<body style="margin: 0; padding: 0; font-family: inter, sans-serif; background-color: #f5f5f5; padding-top: 20px;">
 
     <!-- Main Wrapper -->
     <table width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #ffffff; max-width: 600px; margin: 0 auto; border-collapse: collapse; font-family: inter, sans-serif;">
@@ -19,11 +19,11 @@
         <!-- Header Section -->
 
         <tr>
-            <td align="center" style="background-color: rgba(51, 141, 251, 1); padding: 20px;">
+            <td align="center" style="background-color: rgba(51, 141, 251, 1); padding: 10px;">
                 <div style="color: #ffffff; text-align: center;">
-                    <img src="https://emailbulkshoot.s3.ap-southeast-2.amazonaws.com/assests+for+Email+Automation/padlock.png" alt="Sign Up" style="width: 32px; height: 32px; margin-bottom: 10px; display: block; margin-left: auto; margin-right: auto;" />
+                    <img src="https://wishgeekstechserve.s3.ap-southeast-2.amazonaws.com/lg.png" alt="Sign Up" style="width: 32px; height: 32px; margin-bottom: 10px; display: block; margin-left: auto; margin-right: auto;" />
                     <p style="font-size: 18px; font-weight: bold; font-family: inter, sans-serif; margin: 0;">
-                        Reset Your Password
+                        Your Email Access is Expiring Soon – Take Action Now!
                     </p>
                 </div>
             </td>
@@ -34,25 +34,67 @@
 <tr>
     <td style="padding: 10px 20px; font-size: 14px; color: #333; font-family: inter, sans-serif;">
         <p><strong>Dear {{username}},</strong></p>
-        <p>We received a request to reset your password. No worries—we’ve got you covered!</p>
+        <p>We noticed that your email access is set to expire and you have <strong> {{email_left}}</strong> out of <strong> {{email_limit}}</strong> on your current plan {{plan_name}}. To ensure uninterrupted communication and access to your account, please take action before it's too late!</p>
        
     </td>
 </tr>
 
 <tr>
-    <td style="padding: 10px 20px; font-size: 14px; color: #333; font-family: inter, sans-serif;">
-        <strong>Click the button below to reset your password:</strong>
+    <td style="padding: 20px; font-family: inter, sans-serif; font-size: 14px;">
+        <b>What You Need to Do:</b>
+        <p style="margin-top: 10px; margin-bottom: 10px;">✅ Renew your access to continue using your email seamlessly</p>
+        <p style="margin-top: 10px; margin-bottom: 10px;">✅ Update your account details if necessary</p>
+            <p style="margin-top: 10px; margin-bottom: 10px;">✅ Backup important emails & data to avoid losing any information</p>
     </td>
 </tr>
+ 
 
-    
+        <!-- Table Section -->
+        <tr>
+            <td style="padding: 10px;">
+                <table width="100%" cellspacing="0" cellpadding="10" style="background: rgba(51, 141, 251, 0.14); text-align: center; font-size: 14px; width: 100%; border-collapse: collapse; font-family: inter, sans-serif; border-radius: 10px;">
+                    <tr>
+                        <td>Plan Name</td>
+                        <td>Price</td>
+                        <td>Days</td>
+                        <td>No. of Emails</td>
+                        
+
+                    </tr>
+                    <tr style="font-weight: 600;">
+                        <td>Basic</td>
+                        <td>149</td>
+                        <td>14 (1 user)</td>
+                        <td>200</td>
+                    </tr>
+                    <tr style="font-weight: 600;">
+                        <td>Standard</td>
+                        <td>300</td>
+                        <td>30 (3 users)</td>
+                        <td>360 + 50 (free)</td>
+                    </tr>
+                    <tr style="font-weight: 600;">
+                        <td>Premium</td>
+                        <td>499</td>
+                        <td>30 (5 users)</td>
+                        <td>600 + 90 (free)</td>
+                    </tr>
+                    <tr style="font-weight: 600;">
+                        <td>Platinum</td>
+                        <td>999</td>
+                        <td>30 (custom users)</td>
+                        <td>Unlimited</td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
         
 
         <!-- Button -->
         <tr>
             <td align="center" style="padding: 15px;">
-                <a href="{{reset_link}}" style="background: rgba(51, 141, 251, 1); color: white; text-decoration: none; padding: 10px 20px; font-size: 16px; border-radius: 5px; display: inline-block;">
-                    Reset Your Password
+                <a href="#" style="background: rgba(51, 141, 251, 1); color: white; text-decoration: none; padding: 10px 20px; font-size: 16px; border-radius: 5px; display: inline-block;">
+                    Renew Your Plan
                 </a>
             </td>
         </tr>

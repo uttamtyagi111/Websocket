@@ -9,7 +9,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from django.utils import timezone
-from .utils import send_email_with_pdf
+from .utils import send_plan_upgrade_email_with_pdf,send_plan_purchase_email_with_pdf
 from django.conf import settings
 from datetime import timedelta
 import razorpay
@@ -277,13 +277,13 @@ def handle_payment_callback(request):
         user_profile.razorpay_payment_id = razorpay_payment_id
         user_profile.save()
 
-        send_email_with_pdf(
-            transaction_id=razorpay_payment_id,
-            plan_name=plan.name,
-            price=plan.price,
-            expiry_date=user_profile.plan_expiration_date,
-            user_email=user_profile.user.email,
-        )
+        # send_plan_purchase_email_with_pdf(
+        #     transaction_id=razorpay_payment_id,
+        #     plan_name=plan.name,
+        #     price=plan.price,
+        #     expiry_date=user_profile.plan_expiration_date,
+        #     user_email=user_profile.user.email,
+        # )
 
         return Response({"message": "Payment successful, plan activated!"}, status=200)
 
@@ -402,9 +402,9 @@ def initiate_payment(request):
 
         if response.status_code == 200 and response_data.get("success"):
             user_profile.phonepe_transaction_id = merchant_transaction_id
-            user_profile.current_plan = plan
-            user_profile.plan_status = "inactive" 
-            user_profile.payment_status = "initiated"
+            # user_profile.current_plan = plan
+            # user_profile.plan_status = "inactive" 
+            # user_profile.payment_status = "initiated"
             user_profile.pending_plan_id = plan.id
             user_profile.save()
 
@@ -457,8 +457,8 @@ def verify_payment(request):
             if payment_status == "success":
                 plan = Plan.objects.get(id=user_profile.pending_plan_id)
                 user_profile.activate_plan(plan)
-                user_profile.plan_status = "active" 
-                user_profile.payment_status = "paid" 
+                # user_profile.plan_status = "active" 
+                # user_profile.payment_status = "paid" 
                 user_profile.save()
 
             if payment_status == "":
@@ -466,22 +466,55 @@ def verify_payment(request):
                     id=user_profile.pending_plan_id
                 )  
 
-                user_profile.activate_plan(plan)
+                user_profile.current_plan = plan
+                user_profile.plan_name = plan.name
+                user_profile.plan_status = "active"
+                user_profile.plan_start_date = timezone.now()
+                user_profile.plan_expiration_date = timezone.now() + timedelta(days=plan.duration_days)
+                user_profile.payment_status = "paid"
+                user_profile.emails_sent = 0
+                user_profile.email_limit = plan.email_limit
+                user_profile.current_plan.device_limit = plan.device_limit
+                user_profile.pending_plan_id = None
+                user_profile.save()
+                logger.info(f"UserProfile updated successfully for {user_profile.user.email}")
+                
+                plan_name = user_profile.plan_name
+                plan_price = plan.price
+                email_limit = user_profile.email_limit
+                device_limit = user_profile.current_plan.device_limit
+                plan_start_date = user_profile.plan_start_date
+                plan_expiration_date = user_profile.plan_expiration_date
+                user_email = user_profile.user.email
+                user_name = user_profile.user.username
+                print(user_name)
 
-                send_email_with_pdf(
+                send_plan_purchase_email_with_pdf(
                     transaction_id=merchant_transaction_id,
-                    plan_name=plan.name,
-                    price=plan.price,
-                    expiry_date=user_profile.plan_expiration_date,
-                    user_email=user_profile.user.email,
+                    plan_name=plan_name,
+                    price=plan_price,  
+                    expiry_date=plan_expiration_date, 
+                    user_email=user_email,
+                    email_limit=email_limit,
+                    device_limit=device_limit,
+                    duration_days=plan.duration_days,
+                    plan_start_date=plan_start_date.strftime("%d %B %Y"),
+                    plan_expiration_date=plan_expiration_date.strftime("%Y-%m-%d %H:%M:%S"),
+                    user_name=user_name, 
+                    user_address_line1=user_profile.address_line1,  
+                    user_address_line2=user_profile.address_line2, 
+                    user_city=user_profile.city,
+                    user_state=user_profile.state,
+                    user_zip_code=user_profile.zip_code, 
+                    user_country=user_profile.country,
                 )
-                return redirect("http://localhost:8000/payment-success")
+                return redirect("http://localhost:8000/payment-success",status=200)
             else:
                 user_profile.plan_status = "inactive"
                 user_profile.payment_status = payment_status
                 user_profile.save()
 
-                return redirect("http://localhost:8000/payment-failed")
+                return redirect("http://localhost:8000/payment-failed",status=400)
         else:
             return JsonResponse(
                 {"error": response_data.get("message", "Payment verification failed.")},
@@ -540,15 +573,15 @@ def upgrade_plan(request):
         # Payment Process
         amount = int(new_plan.price) * 100  # Convert to paise
         merchant_transaction_id = f'upgrade_{timezone.now().strftime("%Y%m%d%H%M%S")}'
-        mobile = request.user.profile.mobile    # Ensure phone number is stored in profile
+        mobile = user_profile.mobile    # Ensure phone number is stored in profile
 
         payload = {
             "merchantId": MERCHANT_ID,
             "merchantTransactionId": merchant_transaction_id,
             "message": "Upgrade Plan Payment Initiated",
-            "name": request.user.username,
+            "name": user_profile.user.username,
             "amount": amount,
-            "redirectUrl": f"https://websocket-bpqt.onrender.com/verify-upgrade-payment/?id={merchant_transaction_id}",
+            "redirectUrl": f"http://localhost:8000/verify-upgrade-payment/?id={merchant_transaction_id}",
             "redirectMode": "POST",
             "callbackUrl": f"http://localhost:3000/payment-success?id={merchant_transaction_id}",
             "mobileNumber": mobile,
@@ -573,8 +606,8 @@ def upgrade_plan(request):
         if response.status_code == 200 and response_data.get("success"):
             user_profile.phonepe_transaction_id = merchant_transaction_id
             user_profile.pending_plan_id = new_plan.id
-            user_profile.plan_status = "inactive"  # Until payment is confirmed
-            user_profile.payment_status = "initiated"
+            # user_profile.plan_status = "inactive"  # Until payment is confirmed
+            # user_profile.payment_status = "initiated"
             user_profile.save()
 
             redirect_url = response_data["data"]["instrumentResponse"]["redirectInfo"]["url"]
@@ -592,6 +625,18 @@ def upgrade_plan(request):
 import logging
 logger = logging.getLogger(__name__)
 
+from django.http import JsonResponse
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+import hashlib
+import requests
+import logging
+from datetime import timedelta
+from django.utils import timezone
+from .models import UserProfile, Plan
+from .utils import send_plan_upgrade_email_with_pdf
+logger = logging.getLogger(__name__)
+
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def verify_upgrade_payment(request):
@@ -603,7 +648,7 @@ def verify_upgrade_payment(request):
 
     if not merchant_transaction_id:
         logger.error("Transaction ID is missing in the request.")
-        return JsonResponse({"error": "Transaction ID is required."}, status=400)
+        return Response({"error": "Transaction ID is required."}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
         user_profile = UserProfile.objects.get(phonepe_transaction_id=merchant_transaction_id)
@@ -625,72 +670,391 @@ def verify_upgrade_payment(request):
         logger.info(f"Sending request to PhonePe Verify URL: {verify_url}")
 
         response = requests.get(verify_url, headers=headers)
-        response_data = response.json()
-        logger.info(f"PhonePe Response: {response_data}")
+        
+        # Check if the response was successful before proceeding
+        if response.status_code == 200:
+            response_data = response.json()
+            logger.info(f"PhonePe Response: {response_data}")
 
-        if response.status_code == 200 and response_data.get("success"):
-            payment_status = response_data.get("data", {}).get("state", "").upper()
-            logger.info(f"Payment Status: {payment_status}")
+            if response_data.get("success"):
+                payment_status = response_data.get("data", {}).get("state", "").upper()
+                logger.info(f"Payment Status: {payment_status}")
 
-            if payment_status == "COMPLETED":
-                new_plan = Plan.objects.get(id=user_profile.pending_plan_id)
-                logger.info(f"Plan Found: {new_plan.name}, Price: {new_plan.price}")
+                if payment_status == "COMPLETED":
+                    new_plan = Plan.objects.get(id=user_profile.pending_plan_id)
+                    logger.info(f"Plan Found: {new_plan.name}, Price: {new_plan.price}")
 
-                # Update user's plan
-                existing_expiration_date = user_profile.plan_expiration_date
-                new_expiration_date = (
-                    existing_expiration_date if existing_expiration_date else timezone.now() + timedelta(days=30)
-                )
+                    # Update user's plan
+                    existing_expiration_date = user_profile.plan_expiration_date
+                    new_expiration_date = (
+                        existing_expiration_date if existing_expiration_date else timezone.now() + timedelta(days=30)
+                    )
 
-                user_profile.plan_name = new_plan.name
-                user_profile.current_plan = new_plan
-                user_profile.plan_status = "active"
-                user_profile.payment_status = "paid"
-                user_profile.plan_start_date = timezone.now()
-                user_profile.plan_expiration_date = new_expiration_date
-                user_profile.email_limit += new_plan.email_limit
-                user_profile.pending_plan_id = None
-                user_profile.save()
-                logger.info(f"UserProfile updated successfully for {user_profile.user.email}")
+                    user_profile.plan_name = new_plan.name
+                    user_profile.current_plan = new_plan
+                    user_profile.plan_status = "active"
+                    user_profile.payment_status = "paid"
+                    user_profile.plan_start_date = timezone.now()
+                    user_profile.plan_expiration_date = new_expiration_date
+                    user_profile.email_limit += new_plan.email_limit
+                    user_profile.current_plan.device_limit = new_plan.device_limit  
+                    user_profile.pending_plan_id = None
+                    user_profile.save()
+                    logger.info(f"UserProfile updated successfully for {user_profile.user.email}")
 
-                # Send Confirmation Email
-                send_email_with_pdf(
-                    transaction_id=merchant_transaction_id,
-                    plan_name=new_plan.name,
-                    price=new_plan.price,
-                    expiry_date=new_expiration_date,
-                    user_email=user_profile.user.email,
-                )
-                logger.info(f"Confirmation email sent to {user_profile.user.email}")
+                    # Retrieve the saved data for email
+                    plan_name = user_profile.plan_name
+                    plan_price = new_plan.price
+                    email_limit = user_profile.email_limit
+                    device_limit = user_profile.current_plan.device_limit
+                    plan_start_date = user_profile.plan_start_date
+                    plan_expiration_date = user_profile.plan_expiration_date
+                    user_email = user_profile.user.email
+                    user_name = user_profile.user.username
 
-                return JsonResponse({"message": "Payment successful! Plan upgraded."}, status=200)
+                    # Send Confirmation Email with the saved data from the database
+                    send_plan_upgrade_email_with_pdf(
+                        transaction_id=merchant_transaction_id,
+                        plan_name=plan_name,
+                        price=plan_price,  
+                        expiry_date=plan_expiration_date, 
+                        user_email=user_email,
+                        email_limit=email_limit,
+                        device_limit=device_limit,
+                        duration_days=new_plan.duration_days,
+                        plan_start_date=plan_start_date.strftime("%d %B %Y"),
+                        plan_expiration_date=plan_expiration_date.strftime("%d %B %Y"),
+                        user_name=user_name, 
+                        user_address_line1=user_profile.address_line1,  
+                        user_address_line2=user_profile.address_line2, 
+                        user_city=user_profile.city,
+                        user_state=user_profile.state,
+                        user_zip_code=user_profile.zip_code, 
+                        user_country=user_profile.country,
+                    )
 
-            elif payment_status == "FAILED":
-                logger.warning(f"Payment failed for Transaction ID: {merchant_transaction_id}")
-                user_profile.payment_status = "failed"
-                user_profile.phonepe_transaction_id = None
-                user_profile.pending_plan_id = None
-                user_profile.save()
-                return JsonResponse({"message": "Payment failed."}, status=400)
+                    logger.info(f"Confirmation email sent to {user_profile.user.email}")
 
-            elif payment_status == "PENDING":
-                logger.info(f"Payment pending for Transaction ID: {merchant_transaction_id}")
-                return JsonResponse({"message": "Payment is still pending."}, status=202)
+                    return Response({"message": "Payment successful! Plan upgraded."}, status=status.HTTP_200_OK)
 
-        logger.error(f"Unexpected response from PhonePe: {response_data}")
-        return JsonResponse(response_data, status=response.status_code)
+                elif payment_status == "FAILED":
+                    logger.warning(f"Payment failed for Transaction ID: {merchant_transaction_id}")
+                    user_profile.payment_status = "failed"
+                    user_profile.phonepe_transaction_id = None
+                    user_profile.pending_plan_id = None
+                    user_profile.save()
+                    return Response({"message": "Payment failed."}, status=status.HTTP_400_BAD_REQUEST)
+
+                elif payment_status == "PENDING":
+                    logger.info(f"Payment pending for Transaction ID: {merchant_transaction_id}")
+                    return Response({"message": "Payment is still pending."}, status=status.HTTP_202_ACCEPTED)
+
+            else:
+                # If 'success' is not in the response, log the response and return an error
+                logger.error(f"PhonePe response indicates failure: {response_data}")
+                return Response({"error": "Payment verification failed. Please try again."}, status=status.HTTP_400_BAD_REQUEST)
+
+        else:
+            logger.error(f"Error with PhonePe API call, status code: {response.status_code}")
+            return Response({"error": "Failed to connect to PhonePe API."}, status=status.HTTP_400_BAD_REQUEST)
 
     except UserProfile.DoesNotExist:
         logger.error(f"User profile not found for Transaction ID: {merchant_transaction_id}")
-        return JsonResponse({"error": "User profile not found for this transaction."}, status=404)
+        return Response({"error": "User profile not found for this transaction."}, status=status.HTTP_404_NOT_FOUND)
 
     except Plan.DoesNotExist:
         logger.error(f"Plan not found for Transaction ID: {merchant_transaction_id}")
-        return JsonResponse({"error": "Plan associated with this transaction does not exist."}, status=404)
+        return Response({"error": "Plan associated with this transaction does not exist."}, status=status.HTTP_404_NOT_FOUND)
 
     except Exception as e:
         logger.exception(f"Error while verifying payment: {str(e)}")
-        return JsonResponse({"error": str(e)}, status=500)
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# @api_view(["POST"])
+# @permission_classes([AllowAny])
+# def verify_upgrade_payment(request):
+#     """
+#     Verify the payment status and activate the user's upgraded plan if successful.
+#     """
+#     merchant_transaction_id = request.POST.get("id")
+#     logger.info(f"Verifying payment for Transaction ID: {merchant_transaction_id}")
+
+#     if not merchant_transaction_id:
+#         logger.error("Transaction ID is missing in the request.")
+#         return Response({"error": "Transaction ID is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+#     try:
+#         user_profile = UserProfile.objects.get(phonepe_transaction_id=merchant_transaction_id)
+#         logger.info(f"UserProfile found for Transaction ID: {merchant_transaction_id}, User: {user_profile.user.email}")
+
+#         # Generate checksum for verification request
+#         checksum_string = f"/pg/v1/status/{MERCHANT_ID}/{merchant_transaction_id}{SALT_KEY}"
+#         checksum_hash = hashlib.sha256(checksum_string.encode()).hexdigest()
+#         checksum = f"{checksum_hash}###1"
+
+#         headers = {
+#             "accept": "application/json",
+#             "Content-Type": "application/json",
+#             "X-VERIFY": checksum,
+#         }
+
+#         # Correctly format the verify URL
+#         verify_url = f"{VERIFY_URL}/{MERCHANT_ID}/{merchant_transaction_id}"
+#         logger.info(f"Sending request to PhonePe Verify URL: {verify_url}")
+
+#         response = requests.post(verify_url, headers=headers)
+#         if response.status_code == 200:
+#             try:
+#                 # Attempt to parse JSON response
+#                 response_data = response.json()
+#             except requests.exceptions.JSONDecodeError:
+#                 # Handle case where response is not JSON
+#                 print("Received non-JSON response:", response.text)
+#         else:
+#             print(f"Request failed with status code {response.status_code}: {response.text}")
+#         # response_data = response.json()
+#         # logger.info(f"PhonePe Response: {response_data}")
+
+#         if response.status_code == 200 and response_data.get("success"):
+#             payment_status = response_data.get("data", {}).get("state", "").upper()
+#             logger.info(f"Payment Status: {payment_status}")
+
+#             if payment_status == "COMPLETED":
+#                 new_plan = Plan.objects.get(id=user_profile.pending_plan_id)
+#                 logger.info(f"Plan Found: {new_plan.name}, Price: {new_plan.price}")
+
+#                 # Update user's plan
+#                 existing_expiration_date = user_profile.plan_expiration_date
+#                 new_expiration_date = (
+#                     existing_expiration_date if existing_expiration_date else timezone.now() + timedelta(days=30)
+#                 )
+
+#                 user_profile.plan_name = new_plan.name
+#                 user_profile.current_plan = new_plan
+#                 user_profile.plan_status = "active"
+#                 user_profile.payment_status = "paid"
+#                 user_profile.plan_start_date = timezone.now()
+#                 user_profile.plan_expiration_date = new_expiration_date
+#                 user_profile.email_limit += new_plan.email_limit
+#                 user_profile.current_plan.device_limit = new_plan.device_limit  
+#                 user_profile.pending_plan_id = None
+#                 user_profile.save()
+#                 logger.info(f"UserProfile updated successfully for {user_profile.user.email}")
+
+#                 # Retrieve the saved data for email
+#                 plan_name = user_profile.plan_name
+#                 plan_price = new_plan.price
+#                 email_limit = user_profile.email_limit
+#                 device_limit = user_profile.current_plan.device_limit
+#                 plan_start_date = user_profile.plan_start_date
+#                 plan_expiration_date = user_profile.plan_expiration_date
+#                 user_email = user_profile.user.email
+#                 user_name = user_profile.user.username
+
+#                 # Send Confirmation Email with the saved data from the database
+#                 send_plan_upgrade_email_with_pdf(
+#                     transaction_id=merchant_transaction_id,
+#                     plan_name=plan_name,
+#                     price=plan_price,  
+#                     expiry_date=plan_expiration_date, 
+#                     user_email=user_email,
+#                     email_limit=email_limit,
+#                     device_limit=device_limit,
+#                     duration_days=new_plan.duration_days,
+#                     plan_start_date=plan_start_date.strftime("%d %B %Y"),
+#                     plan_expiration_date=plan_expiration_date.strftime("%d %B %Y"),
+#                     user_name=user_name, 
+#                     user_address_line1=user_profile.address_line1,  
+#                     user_address_line2=user_profile.address_line2, 
+#                     user_city=user_profile.city,
+#                     user_state=user_profile.state,
+#                     user_zip_code=user_profile.zip_code, 
+#                     user_country=user_profile.country,
+#                 )
+
+#                 logger.info(f"Confirmation email sent to {user_profile.user.email}")
+
+#                 return Response({"message": "Payment successful! Plan upgraded."}, status=status.HTTP_200_OK)
+
+#             elif payment_status == "FAILED":
+#                 logger.warning(f"Payment failed for Transaction ID: {merchant_transaction_id}")
+#                 user_profile.payment_status = "failed"
+#                 user_profile.phonepe_transaction_id = None
+#                 user_profile.pending_plan_id = None
+#                 user_profile.save()
+#                 return Response({"message": "Payment failed."}, status=status.HTTP_400_BAD_REQUEST)
+
+#             elif payment_status == "PENDING":
+#                 logger.info(f"Payment pending for Transaction ID: {merchant_transaction_id}")
+#                 return Response({"message": "Payment is still pending."}, status=status.HTTP_202_ACCEPTED)
+
+#         logger.error(f"Unexpected response from PhonePe: {response_data}")
+#         return Response(response_data, status=response.status_code)
+
+#     except UserProfile.DoesNotExist:
+#         logger.error(f"User profile not found for Transaction ID: {merchant_transaction_id}")
+#         return Response({"error": "User profile not found for this transaction."}, status=status.HTTP_404_NOT_FOUND)
+
+#     except Plan.DoesNotExist:
+#         logger.error(f"Plan not found for Transaction ID: {merchant_transaction_id}")
+#         return Response({"error": "Plan associated with this transaction does not exist."}, status=status.HTTP_404_NOT_FOUND)
+
+#     except Exception as e:
+#         logger.exception(f"Error while verifying payment: {str(e)}")
+#         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+from .views import send_plan_upgrade_email_with_pdf  
+
+@permission_classes([AllowAny])
+def test_send_plan_upgrade_email(request):
+    # Sample data to simulate the user and the transaction
+    transaction_id = 'sample_transaction_id'
+    plan_name = 'Premium Plan'
+    price = 99.99
+    expiry_date = '2025-03-21'
+    user_email = 'uttam@wishgeekstechserve.com'
+    email_limit = 100
+    device_limit = 5
+    duration_days = 30
+    plan_start_date = '2025-02-21'
+    plan_expiration_date = '2025-03-21'
+    user_name = 'Test User'
+    user_country = 'US'
+    user_zip_code = '12345'
+    user_state = 'CA'
+    user_city = 'Test City'
+    user_address_line2 = 'Apt 101'
+    user_address_line1 = '123 Test St'
+
+    # Call the function to send the email
+    return send_plan_upgrade_email_with_pdf(
+        transaction_id=transaction_id,
+        plan_name=plan_name,
+        price=price,
+        expiry_date=expiry_date,
+        user_email=user_email,
+        email_limit=email_limit,
+        device_limit=device_limit,
+        duration_days=duration_days,
+        plan_start_date=plan_start_date,
+        plan_expiration_date=plan_expiration_date,
+        user_name=user_name,
+        user_country=user_country,
+        user_zip_code=user_zip_code,
+        user_state=user_state,
+        user_city=user_city,
+        user_address_line2=user_address_line2,
+        user_address_line1=user_address_line1
+    )
+
+
+# @api_view(["GET"])
+# @permission_classes([AllowAny])
+# def verify_upgrade_payment(request):
+#     """
+#     Verify the payment status and activate the user's upgraded plan if successful.
+#     """
+#     merchant_transaction_id = request.GET.get("id")
+#     logger.info(f"Verifying payment for Transaction ID: {merchant_transaction_id}")
+
+#     if not merchant_transaction_id:
+#         logger.error("Transaction ID is missing in the request.")
+#         return JsonResponse({"error": "Transaction ID is required."}, status=400)
+
+#     try:
+#         user_profile = UserProfile.objects.get(phonepe_transaction_id=merchant_transaction_id)
+#         logger.info(f"UserProfile found for Transaction ID: {merchant_transaction_id}, User: {user_profile.user.email}")
+
+#         # Generate checksum for verification request
+#         checksum_string = f"/pg/v1/status/{MERCHANT_ID}/{merchant_transaction_id}{SALT_KEY}"
+#         checksum_hash = hashlib.sha256(checksum_string.encode()).hexdigest()
+#         checksum = f"{checksum_hash}###1"
+
+#         headers = {
+#             "accept": "application/json",
+#             "Content-Type": "application/json",
+#             "X-VERIFY": checksum,
+#         }
+
+#         # Correctly format the verify URL
+#         verify_url = f"{VERIFY_URL}/{MERCHANT_ID}/{merchant_transaction_id}"
+#         logger.info(f"Sending request to PhonePe Verify URL: {verify_url}")
+
+#         response = requests.get(verify_url, headers=headers)
+#         response_data = response.json()
+#         logger.info(f"PhonePe Response: {response_data}")
+
+#         if response.status_code == 200 and response_data.get("success"):
+#             payment_status = response_data.get("data", {}).get("state", "").upper()
+#             logger.info(f"Payment Status: {payment_status}")
+
+#             if payment_status == "COMPLETED":
+#                 new_plan = Plan.objects.get(id=user_profile.pending_plan_id)
+#                 logger.info(f"Plan Found: {new_plan.name}, Price: {new_plan.price}")
+
+#                 # Update user's plan
+#                 existing_expiration_date = user_profile.plan_expiration_date
+#                 new_expiration_date = (
+#                     existing_expiration_date if existing_expiration_date else timezone.now() + timedelta(days=30)
+#                 )
+
+#                 user_profile.plan_name = new_plan.name
+#                 user_profile.current_plan = new_plan
+#                 user_profile.plan_status = "active"
+#                 user_profile.payment_status = "paid"
+#                 user_profile.plan_start_date = timezone.now()
+#                 user_profile.plan_expiration_date = new_expiration_date
+#                 user_profile.email_limit += new_plan.email_limit
+#                 user_profile.pending_plan_id = None
+#                 user_profile.save()
+#                 logger.info(f"UserProfile updated successfully for {user_profile.user.email}")
+
+#                 # Send Confirmation Email
+#                 send_plan_upgrade_email_with_pdf(
+#                     transaction_id=merchant_transaction_id,
+#                     plan_name=new_plan.name,
+#                     price=new_plan.price,
+#                     expiry_date=user_profile.plan_expiration_date,
+#                     user_email=user_profile.user.email,
+#                     email_limit=new_plan.email_limit, 
+#                     device_limit=new_plan.device_limit,
+#                     duration_days=new_plan.duration_days,  
+#                     plan_start_date=user_profile.plan_start_date,  
+#                 )
+
+#                 logger.info(f"Confirmation email sent to {user_profile.user.email}")
+
+#                 return JsonResponse({"message": "Payment successful! Plan upgraded."}, status=200)
+
+#             elif payment_status == "FAILED":
+#                 logger.warning(f"Payment failed for Transaction ID: {merchant_transaction_id}")
+#                 user_profile.payment_status = "failed"
+#                 user_profile.phonepe_transaction_id = None
+#                 user_profile.pending_plan_id = None
+#                 user_profile.save()
+#                 return JsonResponse({"message": "Payment failed."}, status=400)
+
+#             elif payment_status == "PENDING":
+#                 logger.info(f"Payment pending for Transaction ID: {merchant_transaction_id}")
+#                 return JsonResponse({"message": "Payment is still pending."}, status=202)
+
+#         logger.error(f"Unexpected response from PhonePe: {response_data}")
+#         return JsonResponse(response_data, status=response.status_code)
+
+#     except UserProfile.DoesNotExist:
+#         logger.error(f"User profile not found for Transaction ID: {merchant_transaction_id}")
+#         return JsonResponse({"error": "User profile not found for this transaction."}, status=404)
+
+#     except Plan.DoesNotExist:
+#         logger.error(f"Plan not found for Transaction ID: {merchant_transaction_id}")
+#         return JsonResponse({"error": "Plan associated with this transaction does not exist."}, status=404)
+
+#     except Exception as e:
+#         logger.exception(f"Error while verifying payment: {str(e)}")
+#         return JsonResponse({"error": str(e)}, status=500)
 
 
 
