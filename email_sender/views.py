@@ -1009,6 +1009,9 @@ class CampaignView(APIView):
             )
 
 import json
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 class SendEmailsView(APIView):
     DEFAULT_EMAIL_LIMIT = 20
 
@@ -1310,30 +1313,64 @@ class SendEmailsView(APIView):
 
             # Now send the email with the dynamically rendered subject
             smtp_server = smtp_servers[i % num_smtp_servers]  # Use round-robin to pick SMTP server
-            email = EmailMessage(
-                subject=rendered_subject,  # Use dynamically rendered subject
-                body=email_body,
-                from_email=f"{display_name} <{smtp_server.username}>",  # Sender email
-                to=[recipient_email],  # Recipient email
-            )
-            email.content_subtype = "html"  # Set email content type to HTML
 
             # Send the email using the selected SMTP server connection
+            # try:
+            #     connection = get_connection(
+            #         backend="django.core.mail.backends.smtp.EmailBackend",
+            #         host=smtp_server.host,
+            #         port=smtp_server.port,
+            #         username=smtp_server.username,
+            #         password=smtp_server.password,
+            #         use_tls=smtp_server.use_tls,
+            #     )
+            #     email = EmailMessage(
+            #         subject=rendered_subject,  # Use dynamically rendered subject
+            #         body=email_body,
+            #         from_email=f"{display_name} <{smtp_server.username}>",  # Sender email
+            #         to=[recipient_email],# Recipient email
+            #         connection=connection,
+            #     )
+            #     email.content_subtype = "html"  # Set email content type to HTML
+            #     # email.connection = connection
+            #     email.send()
+            #     status_message = "Sent successfully"
+            #     successful_sends += 1
+                # profile.increment_email_count()  # Update profile's sent email count
+                # profile.save()
             try:
-                connection = get_connection(
-                    backend="django.core.mail.backends.smtp.EmailBackend",
-                    host=smtp_server.host,
-                    port=smtp_server.port,
-                    username=smtp_server.username,
-                    password=smtp_server.password,
-                    use_tls=smtp_server.use_tls,
-                )
-                email.connection = connection
-                email.send()
-                status_message = "Sent successfully"
-                successful_sends += 1
-                profile.increment_email_count()  # Update profile's sent email count
-                profile.save()
+                # SMTP Connection Setup
+                smtp_conn = smtplib.SMTP(smtp_server.host, smtp_server.port)
+                smtp_conn.starttls()
+                smtp_conn.login(smtp_server.username, smtp_server.password)
+
+                # Email Setup
+                msg = MIMEMultipart()
+                msg["From"] = f"{display_name} <{smtp_server.username}>"
+                msg["To"] = recipient_email
+                msg["Subject"] = rendered_subject  # Dynamic Subject
+                msg.attach(MIMEText(email_body, "html"))  # HTML Email Body
+
+                # Send Email
+                response = smtp_conn.sendmail(smtp_server.username, recipient_email, msg.as_string())
+
+                # Close Connection
+                smtp_conn.quit()
+
+                # SMTP Response Handling
+                if not response:  
+                    status_message = "Delivered"
+                    successful_sends += 1
+                    profile.increment_email_count()  # Update profile's sent email count
+                    profile.save()
+                else:
+                    status_message = f"Failed to deliver: {response}"
+                    failed_sends += 1
+            
+                
+            except smtplib.SMTPException as e:
+                status_message = f"Failed to send (SMTP Error): {str(e)}"
+                failed_sends += 1
             except Exception as e:
                 status_message = f"Failed to send: {str(e)}"
                 failed_sends += 1

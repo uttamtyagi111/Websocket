@@ -14,7 +14,7 @@ from django.conf import settings
 from datetime import timedelta
 import razorpay
 import logging
-from .models import Plan, UserProfile
+from .models import Plan, UserProfile,PaymentStatus
 from razorpay.errors import BadRequestError, ServerError
 
 
@@ -488,6 +488,15 @@ def verify_payment(request):
                 user_email = user_profile.user.email
                 user_name = user_profile.user.username
                 print(user_name)
+                
+                PaymentStatus.objects.create(
+                    user=user_profile.user,
+                    transaction_id=merchant_transaction_id,
+                    # actual_transaction_id=actual_transaction_id,
+                    amount=plan.price,
+                    plan=plan.name,
+                    status="paid"
+                    )
 
                 send_plan_purchase_email_with_pdf(
                     transaction_id=merchant_transaction_id,
@@ -513,6 +522,16 @@ def verify_payment(request):
                 user_profile.plan_status = "inactive"
                 user_profile.payment_status = payment_status
                 user_profile.save()
+                
+                
+                # PaymentStatus.objects.create(
+                # user=user_profile.user,
+                # transaction_id=merchant_transaction_id,
+                # # actual_transaction_id=actual_transaction_id,
+                # amount=plan.price,
+                # plan=plan.name,
+                # status="Failed"
+                # )
 
                 return redirect("http://localhost:8000/payment-failed",status=400)
         else:
@@ -637,7 +656,7 @@ from .models import UserProfile, Plan
 from .utils import send_plan_upgrade_email_with_pdf
 logger = logging.getLogger(__name__)
 
-@api_view(["GET"])
+@api_view(["GET","POST"])
 @permission_classes([AllowAny])
 def verify_upgrade_payment(request):
     """
@@ -681,6 +700,12 @@ def verify_upgrade_payment(request):
                 logger.info(f"Payment Status: {payment_status}")
 
                 if payment_status == "COMPLETED":
+                    actual_transaction_id = response_data.get("data", {}).get("transactionId")  # PhonePe se actual ID
+                    logger.info(f"Actual Transaction ID from PhonePe: {actual_transaction_id}")
+
+                    if not actual_transaction_id:
+                        logger.warning("Actual Transaction ID not found in PhonePe response.")
+
                     new_plan = Plan.objects.get(id=user_profile.pending_plan_id)
                     logger.info(f"Plan Found: {new_plan.name}, Price: {new_plan.price}")
 
@@ -689,6 +714,16 @@ def verify_upgrade_payment(request):
                     new_expiration_date = (
                         existing_expiration_date if existing_expiration_date else timezone.now() + timedelta(days=30)
                     )
+                    
+                    PaymentStatus.objects.create(
+                    user=user_profile.user,
+                    transaction_id=merchant_transaction_id,
+                    # actual_transaction_id=actual_transaction_id,
+                    amount=new_plan.price,
+                    plan=new_plan.name,
+                    status="paid"
+                    )
+                    
 
                     user_profile.plan_name = new_plan.name
                     user_profile.current_plan = new_plan
@@ -739,6 +774,14 @@ def verify_upgrade_payment(request):
 
                 elif payment_status == "FAILED":
                     logger.warning(f"Payment failed for Transaction ID: {merchant_transaction_id}")
+                    # PaymentStatus.objects.create(
+                    # user=user_profile.user,
+                    # transaction_id=merchant_transaction_id,
+                    # # actual_transaction_id=actual_transaction_id,
+                    # amount=new_plan.price,
+                    # plan=new_plan.name,
+                    # status="failed"
+                    # )
                     user_profile.payment_status = "failed"
                     user_profile.phonepe_transaction_id = None
                     user_profile.pending_plan_id = None

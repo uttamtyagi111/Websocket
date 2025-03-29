@@ -14,6 +14,23 @@ class Plan(models.Model):
 
     def __str__(self):
         return self.name
+    
+    
+from django.db import models
+from django.contrib.auth.models import User
+
+class PaymentStatus(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    transaction_id = models.CharField(max_length=255, unique=True)  # Merchant Transaction ID
+    # actual_transaction_id = models.CharField(max_length=255, null=True, blank=True)  # PhonePe se aayi ID
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    plan = models.CharField(max_length=255,choices=[("basic", "Basic"), ("standard", "Standard"), ("premium", "Premium"),("elite", "Elite")])
+    status = models.CharField(max_length=50, choices=[("pending", "Pending"), ("paid", "Paid"), ("failed", "Failed")])
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.user.email} - {self.transaction_id} - {self.status} - {self.amount}"
+
 
 
 def get_trial_expiration_date():
@@ -30,6 +47,7 @@ class UserProfile(models.Model):
         max_length=20,
         null=True,
         blank=True,
+        choices=[("basic", "Basic"), ("standard", "Standard"), ("premium", "Premium"),("elite", "Elite")]
     )
     plan_status = models.CharField(max_length=20, default="inactive")
     emails_sent = models.IntegerField(default=0)

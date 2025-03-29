@@ -1,11 +1,20 @@
 from django.contrib import admin
-from .models import Plan, UserProfile
+from .models import Plan, UserProfile,PaymentStatus
 
 
 @admin.register(Plan)
 class PlanAdmin(admin.ModelAdmin):
     list_display = ("name", "price", "duration_days", "email_limit", "device_limit")
     search_fields = ("name", "price")
+    
+
+class PaymentStatusAdmin(admin.ModelAdmin):
+    list_display = ("user", "transaction_id", "amount", "plan", "status", "timestamp")
+    list_filter = ("status", "plan", "timestamp")
+    search_fields = ("transaction_id", "user__email")
+    # ordering = ("-timestamp",)
+admin.site.register(PaymentStatus, PaymentStatusAdmin) 
+
 
 
 @admin.register(UserProfile)

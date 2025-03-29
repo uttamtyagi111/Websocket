@@ -85,6 +85,7 @@ def get_logged_in_devices(request):
                 "device_id": device.id,
                 "device_name": device.device_name,
                 "system_info": device.system_info,
+                "created_at": device.created_at
             }
         )
     return Response(
