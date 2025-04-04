@@ -1012,6 +1012,8 @@ import json
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+
+import smtplib
 class SendEmailsView(APIView):
     DEFAULT_EMAIL_LIMIT = 20
 
@@ -1069,6 +1071,41 @@ class SendEmailsView(APIView):
         except Exception as e:
             logger.error(f"DNS lookup failed for domain {domain}: {str(e)}")
             return False
+        
+    def check_email_exists(self,email):
+        """Check if the email exists by performing SMTP validation."""
+        domain = email.split('@')[-1]
+        
+        try:
+            # Resolve the MX record for the domain
+            answers = dns.resolver.resolve(domain, 'MX')
+            mx_record = str(answers[0].exchange)
+            
+            # Create an SMTP connection to the mail server
+            server = smtplib.SMTP(mx_record)
+            server.set_debuglevel(0)  # Disable debug output
+            
+            # Send the EHLO command to the server to identify ourselves
+            server.helo()
+            
+            # Perform the VRFY command to verify the email address
+            code, message = server.verify(email)
+            
+            # Check response code
+            if code == 250:
+                logger.info(f"Email {email} exists on the server.")
+                return True  # Email exists
+            else:
+                logger.info(f"Email {email} does not exist.")
+                return False  # Email does not exist
+        except (smtplib.SMTPException, dns.resolver.NXDOMAIN, dns.resolver.NoAnswer, Exception) as e:
+            logger.error(f"Error checking existence of email {email}: {str(e)}")
+            return False  # Assume the email doesn't exist in case of error
+        finally:
+            try:
+                server.quit()  # Close the connection
+            except:
+                pass
 
     def post(self, request, *args, **kwargs):
         user = request.user
@@ -1188,7 +1225,8 @@ class SendEmailsView(APIView):
         num_smtp_servers = len(smtp_servers)
 
         for i, recipient in enumerate(contact_list):
-
+            # total_contacts += 1 
+            smtp_server = smtp_servers[i % num_smtp_servers]
             if email_limit != 0 and profile.emails_sent >= email_limit:
                 for remaining_recipient in contact_list[i:]:
                     failed_sends += 1
@@ -1199,7 +1237,16 @@ class SendEmailsView(APIView):
                             "email": remaining_recipient.get("Email"),
                             "status": status_message,
                             "timestamp": timestamp,
+                            "from_email": smtp_server.username,
+                            "smtp_server": smtp_server.host,
                         }
+                    )
+                    EmailStatusLog.objects.create(
+                        user=user,
+                        email=validated_email,
+                        status=status_message,
+                        from_email=smtp_server.username,
+                        smtp_server=smtp_server.host,
                     )
                     async_to_sync(channel_layer.group_send)(
                         f"email_status_{user_id}",
@@ -1225,9 +1272,17 @@ class SendEmailsView(APIView):
                         "email": recipient_email,
                         "status": status_message,
                         "timestamp": timestamp,
+                        "from_email": smtp_server.username,
+                        "smtp_server": smtp_server.host,
                     }
                 )
-
+                EmailStatusLog.objects.create(
+                    user=user,
+                    email=validated_email,
+                    status=status_message,
+                    from_email=smtp_server.username,
+                    smtp_server=smtp_server.host,
+                )
                 async_to_sync(channel_layer.group_send)(
                     f"email_status_{user_id}",
                     {
@@ -1248,7 +1303,49 @@ class SendEmailsView(APIView):
                         "email": validated_email,
                         "status": status_message,
                         "timestamp": timestamp,
+                        "from_email": smtp_server.username,
+                        "smtp_server": smtp_server.host,
                     }
+                )
+                EmailStatusLog.objects.create(
+                    user=user,
+                    email=validated_email,
+                    status=status_message,
+                    from_email=smtp_server.username,
+                    smtp_server=smtp_server.host,
+                )
+                async_to_sync(channel_layer.group_send)(
+                    f"email_status_{user_id}",
+                    {
+                        "type": "send_status_update",
+                        "email": validated_email,
+                        "status": status_message,
+                        "timestamp": timestamp,
+                    },
+                )
+                continue
+            
+            
+            # Check if the email exists on the mail server
+            if not self.check_email_exists(validated_email):
+                failed_sends += 1
+                status_message = "Failed to send: Email does not exist"
+                timestamp = timezone.now().strftime("%Y-%m-%d %H:%M:%S")
+                email_statuses.append(
+                    {
+                        "email": validated_email,
+                        "status": status_message,
+                        "timestamp": timestamp,
+                        "from_email": smtp_server.username,
+                        "smtp_server": smtp_server.host,
+                    }
+                )
+                EmailStatusLog.objects.create(
+                    user=user,
+                    email=validated_email,
+                    status=status_message,
+                    from_email=smtp_server.username,
+                    smtp_server=smtp_server.host,
                 )
                 async_to_sync(channel_layer.group_send)(
                     f"email_status_{user_id}",
@@ -1271,6 +1368,7 @@ class SendEmailsView(APIView):
             file_id = contact_file.id
 
             unsubscribe_url = f"{request.scheme}://{request.get_host()}/contact-files/{file_id}/unsubscribe/{contact_id}/"
+            # subject_file_data = SubjectFile.objects.get(id=subject_file.id, user=user)
             subject = subject_data[i % len(subject_data)]  # Correctly select the subject using modulo
             subject_value = subject.get("Subject", "Default Subject")  # Get the subject value safely
             print(f"i: {i}, subject: {subject}") 
@@ -1295,100 +1393,85 @@ class SendEmailsView(APIView):
                 "companyName": recipient.get("companyName"),
                 "unsubscribe_url": unsubscribe_url,  # Make sure the unsubscribe URL is part of the context
             })
-
             try:
-                # Render the email body from the uploaded HTML template (file_content)
                 template = Template(file_content)
-                email_body = template.render(context_data)
+                context_data = Context(context)
+                email_content = template.render(context_data)
             except Exception as e:
                 failed_sends += 1
-                status_message = f"Failed to send: Error formatting email content - {str(e)}"
+                status_message = (
+                    f"Failed to send: Error formatting email content - {str(e)}"
+                )
                 timestamp = timezone.now().strftime("%Y-%m-%d %H:%M:%S")
-                email_statuses.append({
-                    "email": recipient_email,
-                    "status": status_message,
-                    "timestamp": timestamp,
-                })
-                continue  # Skip to the next recipient if email body rendering fails
+                email_statuses.append(
+                    {
+                        "email": validated_email,
+                        "status": status_message,
+                        "timestamp": timestamp,
+                        "from_email": smtp_server.username,
+                        "smtp_server": smtp_server.host,
+                    }
+                )
+                EmailStatusLog.objects.create(
+                    user=user,
+                    email=validated_email,
+                    status=status_message,
+                    from_email=smtp_server.username,
+                    smtp_server=smtp_server.host,
+                )
+                async_to_sync(channel_layer.group_send)(
+                    f"email_status_{user_id}",
+                    {
+                        "type": "send_status_update",
+                        "email": validated_email,
+                        "status": status_message,
+                        "timestamp": timestamp,
+                    },
+                )
+                continue
 
-            # Now send the email with the dynamically rendered subject
-            smtp_server = smtp_servers[i % num_smtp_servers]  # Use round-robin to pick SMTP server
 
-            # Send the email using the selected SMTP server connection
-            # try:
-            #     connection = get_connection(
-            #         backend="django.core.mail.backends.smtp.EmailBackend",
-            #         host=smtp_server.host,
-            #         port=smtp_server.port,
-            #         username=smtp_server.username,
-            #         password=smtp_server.password,
-            #         use_tls=smtp_server.use_tls,
-            #     )
-            #     email = EmailMessage(
-            #         subject=rendered_subject,  # Use dynamically rendered subject
-            #         body=email_body,
-            #         from_email=f"{display_name} <{smtp_server.username}>",  # Sender email
-            #         to=[recipient_email],# Recipient email
-            #         connection=connection,
-            #     )
-            #     email.content_subtype = "html"  # Set email content type to HTML
-            #     # email.connection = connection
-            #     email.send()
-            #     status_message = "Sent successfully"
-            #     successful_sends += 1
-                # profile.increment_email_count()  # Update profile's sent email count
-                # profile.save()
+            email = EmailMessage(
+                subject=rendered_subject,
+                body=email_content,
+                from_email=f"{display_name} <{smtp_server.username}>",
+                to=[recipient_email],
+            )
+            email.content_subtype = "html"
+
             try:
-                # SMTP Connection Setup
-                smtp_conn = smtplib.SMTP(smtp_server.host, smtp_server.port)
-                smtp_conn.starttls()
-                smtp_conn.login(smtp_server.username, smtp_server.password)
-
-                # Email Setup
-                msg = MIMEMultipart()
-                msg["From"] = f"{display_name} <{smtp_server.username}>"
-                msg["To"] = recipient_email
-                msg["Subject"] = rendered_subject  # Dynamic Subject
-                msg.attach(MIMEText(email_body, "html"))  # HTML Email Body
-
-                # Send Email
-                response = smtp_conn.sendmail(smtp_server.username, recipient_email, msg.as_string())
-
-                # Close Connection
-                smtp_conn.quit()
-
-                # SMTP Response Handling
-                if not response:  
-                    status_message = "Delivered"
-                    successful_sends += 1
-                    profile.increment_email_count()  # Update profile's sent email count
-                    profile.save()
-                else:
-                    status_message = f"Failed to deliver: {response}"
-                    failed_sends += 1
-            
-                
-            except smtplib.SMTPException as e:
-                status_message = f"Failed to send (SMTP Error): {str(e)}"
-                failed_sends += 1
+                connection = get_connection(
+                    backend="django.core.mail.backends.smtp.EmailBackend",
+                    host=smtp_server.host,
+                    port=smtp_server.port,
+                    username=smtp_server.username,
+                    password=smtp_server.password,
+                    use_tls=smtp_server.use_tls,
+                )
+                email.connection = connection
+                email.send()
+                status_message = "Sent successfully"
+                successful_sends += 1
+                profile.increment_email_count()
+                profile.save()
             except Exception as e:
                 status_message = f"Failed to send: {str(e)}"
                 failed_sends += 1
                 logger.error(f"Error sending email to {recipient_email}: {str(e)}")
 
-            # Log the email status
             timestamp = timezone.now().strftime("%Y-%m-%d %H:%M:%S")
-            email_statuses.append({
-                "email": recipient_email,
-                "status": status_message,
-                "timestamp": timestamp,
-                "from_email": smtp_server.username,
-                "smtp_server": smtp_server.host,
-            })
-
+            email_statuses.append(
+                {
+                    "email": validated_email,
+                    "status": status_message,
+                    "timestamp": timestamp,
+                    "from_email": smtp_server.username,
+                    "smtp_server": smtp_server.host,
+                }
+            )
             EmailStatusLog.objects.create(
                 user=user,
-                email=recipient_email,
+                email=validated_email,
                 status=status_message,
                 from_email=smtp_server.username,
                 smtp_server=smtp_server.host,
@@ -1398,7 +1481,7 @@ class SendEmailsView(APIView):
                 f"email_status_{user_id}",
                 {
                     "type": "send_status_update",
-                    "email": recipient_email,
+                    "email": validated_email,
                     "status": status_message,
                     "timestamp": timestamp,
                 },
@@ -1406,7 +1489,6 @@ class SendEmailsView(APIView):
 
             if delay_seconds > 0:
                 time.sleep(delay_seconds)
-
 
         return Response(
             {
@@ -1418,7 +1500,6 @@ class SendEmailsView(APIView):
             },
             status=status.HTTP_200_OK,
         )
-
 
 class EmailStatusAnalyticsView(APIView):
     permission_classes = [IsAuthenticated]

@@ -722,8 +722,7 @@ def verify_upgrade_payment(request):
                     amount=new_plan.price,
                     plan=new_plan.name,
                     status="paid"
-                    )
-                    
+                    )                   
 
                     user_profile.plan_name = new_plan.name
                     user_profile.current_plan = new_plan
